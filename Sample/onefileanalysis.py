@@ -1,15 +1,21 @@
 import numpy as np
+import scipy
 from scipy.optimize import curve_fit
 from scipy.fftpack import fft
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+import matplotlib.animation as animation
+import mpl_toolkits.mplot3d.axes3d as p3
+import cmath
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.transforms as mtransforms
 from glob import glob
 from scipy import signal, interpolate
 from sklearn import preprocessing
 from scipy.stats import chisquare
 import os, errno
-import matplotlib as m
 
+import matplotlib as m
 
 class OMA(object):
     '''This class analyses the datafile from the accelerometers, generates graphs and txt files with results
@@ -21,10 +27,12 @@ class OMA(object):
 
     def __init__(self, filename):
         self.filename = filename
-        self.path = os.getcwd()
-        self.samplingratio = 100 # Samp. ratio = 100 Hz. You can change it, but it should be a defined value forever
-        self.Victorinput = np.loadtxt(self.path + '/data/' + self.filename, delimiter=' ', dtype=float)
+        #self.path = os.path.normpath(os.getcwd() + os.sep + os.pardir)
+        self.path = os.path.normpath(os.getcwd())
 
+        self.samplingratio = 100 # Samp. ratio = 100 Hz. You can change it, but it should be a defined value forever
+        #self.Victorinput = np.loadtxt(self.path + '/data/' + self.filename, delimiter=' ', dtype=float)
+        self.Victorinput = np.loadtxt(self.path + '/data/' + self.filename, delimiter=' ', dtype=float)
         # Number of sample points
         self.N = np.size(self.Victorinput, axis=0)
         self.dt = 1/self.samplingratio
@@ -43,6 +51,8 @@ class OMA(object):
         self.rawdatafolder = '/output/onefileanalysis/rawdata/'
         self.resultsfolder = '/output/onefileanalysis/analysisresults/'
         createdirectories = [self.rawdatafolder,self.resultsfolder]
+        self.filenamecomplete = self.path + '/data/' + filename
+
         for directory in createdirectories:
             try:
                 os.makedirs(self.path + directory)
@@ -77,7 +87,7 @@ class OMA(object):
         xyi[6].set_ylabel('Acceleration (mA)', fontsize=15)
         xyi[16].set_xlabel('Time(s)', fontsize=15)
         f0.savefig(self.path + self.rawdatafolder + filename[:-4] + '-raw-18.png')
-        plt.show()
+        
         plt.close(f0)
 
     def rawdataplot(self, channel):
@@ -182,9 +192,8 @@ class OMA(object):
                        self.Victorsingularvalues)
         np.savetxt(self.path + self.resultsfolder + self.filename[:-4] + '-FDD-channels' + str(self.sensors) + '-' + str(np.around(self.freal,1)) + 'Hzdec-frequencies.txt',
                        self.frequencyrange)
-        plt.show()
         #plt.clf()
-        plt.close(fig)
+        #plt.close(fig)
 
         #Estimating noise level
         self.noiselevelindb = np.mean(self.singvaluesindecb[int(0.1*self.resolution//2):int(0.8*self.resolution//2),self.numoflinestoplot-1])
@@ -253,15 +262,9 @@ class OMA(object):
         plt.grid()
         plt.title('OMA with frequency peaks', fontsize=15)
         plt.legend(fontsize=15, loc=3)
-        plt.show()
-        if self.numofchannelsnew == self.numofchannels:
-            f9.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-allsensors-' + str(
-            np.around(self.freal,1)) + 'Hzdec-frequencies.txt ' + '-FDD-peaks.png')
-        elif self.numofchannelsnew == 1:
-            f9.savefig(self.path + self.resultsfolder + self.filename[:-4] + 'sensor-' + str(self.sensors) + '-' + str(
-            np.around(self.freal,1)) + 'Hzdec-frequencies.txt ' + '-FDD-peaks.png')
-        plt.close(f9)
-        del f9
+        f9.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-channels' + str(self.sensors) + '-' + str(np.around(self.freal,1)) + 'Hzdec-frequencies-FDD-peaks.png')
+        #plt.close(f9)
+        #del f9
         return self.peaksstorage
 
     '''def trackmodes(self,frequencyrange,peaksstorage):
@@ -270,7 +273,7 @@ class OMA(object):
         xyi = f10.add_subplot(111)'''
 
     # MODAL ASSURANCE CRITERION (MAC) - FIRST CALCULATION
-    def MAC(self):
+    def MACfunction(self):
         '''
         Calculate the MAC value for each possible pair of peak encountered in the peakpicking function.
         :param frequencyrange: Range of frequency (1-D numpy array);
@@ -328,9 +331,9 @@ class OMA(object):
             f10.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-MACvalues-allpeaks.png')
         elif self.macselectionflag == 1:
             f10.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-MACvalues-selected.png')
-        plt.show()
-        plt.close(f10)
-        del f10
+        
+        #plt.close(f10)
+        #del f10
         return 0
 
     def MACselection(self, MAC, **kwargs):
@@ -352,29 +355,33 @@ class OMA(object):
         # Preserving the pot. modal freq. with smaller Sum of MAC
         # If the Sum of MACs are equal, preserve the lower freq
         self.macselectionflag = 1 #turns the flag to one to show that a selection was already done for those MAC values
-        self.maclimit = kwargs.get('maclimit', 0.15)
+        self.maclimit = kwargs.get('maclimit', 0.8)
         numofpeaks = np.size(self.peaksstorage[0])
-        includedindexes = np.where(MAC > 1 - self.maclimit)  # and !=1
+        includedindexestodelete = np.where((MAC > self.maclimit) & (MAC != 1))# and !=1
         modalfreq = np.array([self.frequencyrange[self.peaksstorage[0]]])[0, :]
         storeindextodelete = []
-        badcorrelation1 = includedindexes[0]
-        badcorrelation2 = includedindexes[1]
-        for element in range(np.size(includedindexes[0])):
-            if badcorrelation1[element] != badcorrelation2[element]:
-                sumofmacs = np.array(
-                    [np.sum(MAC[badcorrelation1[element], :]), np.sum(MAC[badcorrelation2[element], :])])
-                indexofmaxMAC = np.argmax(sumofmacs)
-                if sumofmacs[0] == sumofmacs[1]:
-                    deleteindex = np.amax([badcorrelation1[element], badcorrelation2[element]])
-                else:
-                    if indexofmaxMAC == 0:
-                        deleteindex = badcorrelation1[element]
-                    if indexofmaxMAC == 1:
-                        deleteindex = badcorrelation2[element]
-                if np.size(storeindextodelete) == 0:
-                    storeindextodelete = np.array([deleteindex])
-                else:
-                    storeindextodelete = np.append(storeindextodelete, deleteindex)
+        badcorrelation1 = includedindexestodelete[0]
+        badcorrelation2 = includedindexestodelete[1]
+
+        for element in range(np.size(badcorrelation1)):
+            sumofmacs = np.array(
+                [np.sum(MAC[badcorrelation1[element], :]), np.sum(MAC[badcorrelation2[element], :])])
+
+            indexofmaxMAC = np.argmax(sumofmacs)
+            #If the sum of MACs are the same, the largest frequency is discarted
+            if sumofmacs[0] == sumofmacs[1]:
+                deleteindex = np.amax([badcorrelation1[element], badcorrelation2[element]])
+            # otherwise the frequency with the largest MAC value is discarted
+            else:
+                if indexofmaxMAC == 0:
+                    deleteindex = badcorrelation1[element]
+                if indexofmaxMAC == 1:
+                    deleteindex = badcorrelation2[element]
+            if np.size(storeindextodelete) == 0:
+                storeindextodelete = np.array([deleteindex])
+            else:
+                storeindextodelete = np.append(storeindextodelete, deleteindex)
+
         newmodalfreq = np.delete(modalfreq, np.unique(storeindextodelete))
         newnumberofpeaks = np.size(newmodalfreq)
         goodindexinfullrange, goodindexinmodalfreq = [np.zeros((newnumberofpeaks), dtype=int) for i in range(2)]
@@ -386,7 +393,7 @@ class OMA(object):
             for newpeak2 in range(newnumberofpeaks):
                 newMACmatrix[newpeak1, newpeak2] = MAC[goodindexinmodalfreq[newpeak1], goodindexinmodalfreq[newpeak2]]
         self.goodindexinfullrange = np.reshape(goodindexinfullrange,(1,np.size(goodindexinfullrange))) #to fit the same shape of self.peakstorage
-        print(newmodalfreq)
+        #print(newmodalfreq)
         return newmodalfreq, self.goodindexinfullrange, newMACmatrix
 
     def enhancedfdd(self, **kwargs):
@@ -402,7 +409,7 @@ class OMA(object):
         def gaussianfunction(x, a, mu, sigma):
             return a*np.exp(-np.square(x - mu)/(2*np.square(sigma)))
 
-        self.enhancedmaclimit = kwargs.get('maclimit', 0.8)
+        self.enhancedmaclimit = kwargs.get('maclimit', 0.85)
         self.correlationroi = kwargs.get('correlationroi', (0.30,0.95))
 
         self.efddmodalfreqs, self.efdddampingratio, self.enhancedmodalshape = [], [], []
@@ -427,8 +434,8 @@ class OMA(object):
                     if freqbackward > 0 and MACbackward >= self.enhancedmaclimit:
                         storeindexes.append(freqbackward)
                         freqbackward = freqbackward - 1
-                    print(MACforward,MACbackward)
-                    print(freqforward,freqbackward)
+                    #print(MACforward,MACbackward)
+                    #print(freqforward,freqbackward)
                 storeindexes = [line,np.unique(storeindexes)] #Storing the goodindexes with the respective svd line
             bellfunction = np.zeros(np.size(self.frequencyrange))
             storeindexes = np.array(storeindexes)
@@ -450,8 +457,7 @@ class OMA(object):
             plt.yticks(fontsize=15)
             xyi.set_xlim(self.frequencyrange[peak] - .25, self.frequencyrange[peak]+.25)
             fig.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-bellshape-' + str(self.frequencyrange[peak]) + 'Hz.png')
-            plt.show()
-            plt.close(fig)
+            plt.close()
 
             #Derive the Correlation function from the bell curve
             correlationfunc = np.fft.ifft(np.append(bellfunction,bellfunction[-2::-1]).flatten()) #pluging together 0 , positive, negative terms, excluding the zero the second time
@@ -477,26 +483,6 @@ class OMA(object):
                 if (condition1 == True and condition2 == True):
                     goodindexes.append(indexinpeaks)
             goodindexes = np.unique(goodindexes).flatten()
-
-            '''
-            initialindex = int(correlationpeaks[goodindexes[0]]) #Begin of indexes to be consired in the damping estimation
-            finalindex = int(correlationpeaks[goodindexes[-1]]) #End of indexes to be consired in the damping estimation
-            numberofpeaksinroi = np.size(correlationpeaks[goodindexes[0]:goodindexes[-1]])
-            numofallpeaks = np.size(correlationpeaks)
-            roi = np.linspace(initialindex,finalindex,finalindex-initialindex, endpoint=False, dtype=int)
-            roipeaks = np.linspace(initialindex,finalindex,numberofpeaksinroi, endpoint=True, dtype=int)
-            allpeaknumber = np.linspace(1,numofallpeaks,numofallpeaks, endpoint=True, dtype=int)
-            peaknumber = np.linspace(1,1+numberofpeaksinroi,numberofpeaksinroi, endpoint=True, dtype=int)
-            # Estimate the Logarithm Decrement
-            #kpeakcorrelinlog = 2/peaknumber[1:]*np.log(np.abs(normcorrelationfunc[initialindex]/normcorrelationfunc[roipeaks[1:]])) # delta = ln |r/r0|
-            def linearfunc(x,a,b):
-                return a*x + b
-            logdecfsitparam, cov = curve_fit(linearfunc,allpeaknumber[goodindexes], np.log(np.abs(normcorrelationfunc[roipeaks])))
-
-            logdecfactor = logdecfsitparam[0]
-            logdecfitfunction = np.polyval(logdecfsitparam,allpeaknumber[roipeaks])
-            '''
-
             totalnumofpeaks = np.size(correlationpeaks)
             totalnumofpeaksintheroi = np.size(correlationpeaks[goodindexes[0]:goodindexes[-1]+1])
             numofthepeaks = np.linspace(1,totalnumofpeaks,totalnumofpeaks, endpoint=True, dtype=int)
@@ -516,9 +502,7 @@ class OMA(object):
             plt.yticks(fontsize=15)
             plt.legend()
             fig3.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-logdec-' + str(self.frequencyrange[peak]) + 'Hz.png')
-            plt.show()
-            plt.clf()
-            plt.close(fig3)
+            plt.close()
 
             #Estimate damping factor from the LogDec factor
             #dampingfactor = logdecfactor/np.sqrt(np.square(logdecfactor) + 4*np.square(np.pi))
@@ -546,8 +530,8 @@ class OMA(object):
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)
             fig2.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-autocorrel-' + str(self.frequencyrange[peak]) + 'Hz.png')
-            plt.close(fig2)
-            plt.show()
+            plt.close()
+            
 
             #Crossing times and natural frequency
             fig4 = plt.figure(figsize=(10, 8))
@@ -565,8 +549,7 @@ class OMA(object):
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)
             fig4.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-zerocrossing-' + str(self.frequencyrange[peak]) + 'Hz.png')
-            plt.show()
-            plt.close(fig4)
+            plt.close()
             naturalfrequency = dampedfreq/np.sqrt(1 - np.square(dampingfactor))
             decayfactor = dampingfactor*naturalfrequency
             print('naturalfrequency',naturalfrequency)
@@ -575,23 +558,125 @@ class OMA(object):
             #Enhanced shape form (weighted sum)
             weightedshape = np.zeros((self.numofchannelsnew,self.numofchannelsnew))
             for svdline in range(self.numofchannelsnew):
-                weightedshape[svdline] = self.Victorsingularvalues[peak,svdline] * self.left[peak,:,svdline]
+                weightedshape[:,svdline] = self.Victorsingularvalues[peak,svdline] * self.left[peak,:,svdline]
 
-            newmodalshape = np.sum(weightedshape, axis=0)/np.sum(self.Victorsingularvalues[peak])
-            print(newmodalshape)
-            print(self.left[peak,:,0])
+            newmodalshape = np.sum(weightedshape,axis=1)
+            newmodalshape = np.sum(self.left[peak,:,0])*newmodalshape/np.sum(newmodalshape)
+
+            # 2D Figure for mode shapes visualization
+            figrawmodeshape = plt.figure(figsize=(15, 8))
+            xyrawmodeshape = figrawmodeshape.add_subplot(111)
+            xaxismodeshape = np.linspace(0,self.numofchannelsnew,self.numofchannelsnew,endpoint=False)
+            xyrawmodeshape.plot(xaxismodeshape,newmodalshape, label='EFDD mode shape')
+            xyrawmodeshape.plot(xaxismodeshape, self.left[peak,:,0], label='FDD mode shape')
+            xyrawmodeshape.set_xlabel('Channel', fontsize=15)
+            xyrawmodeshape.set_ylabel('Amplitude (a.u.)', fontsize=15)
+            xyrawmodeshape.set_title('Mode shape for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak],2))), fontsize=15)
+            plt.xticks(fontsize=15)
+            plt.yticks(fontsize=15)
+            figrawmodeshape.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-modeshape-' + str(self.frequencyrange[peak]) + 'Hz.png')
+            plt.grid()
+            plt.legend()
+            #plt.show()
+            plt.close()
+
+            '''# 3D Figure for mode shapes visualization: works fine, but it doesnt bring much
+            print('fig')
+            figrawmodeshape = plt.figure(figsize=(15, 8))
+            xyzrawmodeshape = figrawmodeshape.add_subplot(111, projection='3d')
+            sensorposition = np.linspace(0,self.numofchannelsnew//3,self.numofchannelsnew//3, endpoint=False) #considering 3 axis sensors
+            xmode = [newmodalshape[int(3*i)] for i in range(self.numofchannelsnew//3)]
+            ymode = [newmodalshape[int(3 * i + 1)] for i in range(self.numofchannelsnew // 3)]
+            zmode = [newmodalshape[int(3 * i + 2)] for i in range(self.numofchannelsnew // 3)]
+            xyzrawmodeshape.plot(xmode,ymode,zs=zmode)
+            xyzrawmodeshape.set_xlabel('X Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_ylabel('Y Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_ylabel('Z Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_title('Mode shape for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak],2))), fontsize=15)
+            plt.xticks(fontsize=15)
+            plt.yticks(fontsize=15)
+            plt.show()
+            pĺt.close()'''
+
+            '''
+            # 3D Animation for mode shapes visualization: video works but with 2 sensors it doesnt make sense, must test for 3 sensors
+            figrawmodeshape = plt.figure(figsize=(15, 8))
+            xyzrawmodeshape = figrawmodeshape.add_subplot(111, projection='3d')
+            line, = xyzrawmodeshape.plot([],[],zs=[])
+            Writer = animation.writers['ffmpeg']
+            writer = Writer(fps=20, metadata=dict(artist='Me'), bitrate=1800)
+            sensorposition = np.linspace(0, self.numofchannelsnew // 3, self.numofchannelsnew // 3,
+                                         endpoint=False)  # considering 3 axis sensors
+            xyzrawmodeshape.set_xlabel('X Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_ylabel('Y Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_ylabel('Z Amplitude (a.u.)', fontsize=15)
+            xyzrawmodeshape.set_title(
+                'Mode shape for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))), fontsize=15)
+
+            plt.xticks(fontsize=15)
+            plt.yticks(fontsize=15)
+            sizeofsimulation = 625
+            clock = np.linspace(0,2*np.pi,num=sizeofsimulation)
+            oscilation = np.exp(complex(0,1)*clock)
+
+            xmode, ymode, zmode = [np.zeros(int(self.numofchannelsnew // 3)) for i in range(3)]
+            for dimension in range(int(self.numofchannelsnew // 3)):
+                xmode[dimension] = np.array([newmodalshape[3*dimension]])
+                ymode[dimension] = np.array([newmodalshape[3*dimension + 1]])
+                zmode[dimension] = np.array([newmodalshape[3*dimension + 2]])
+
+            vector = np.zeros((int(self.numofchannelsnew // 3) - 1,3))
+            for dimension in range(int(self.numofchannelsnew // 3) - 1):
+                vector[dimension] = np.array([-xmode[dimension] + xmode[dimension + 1], -ymode[dimension] + ymode[dimension + 1], -zmode[dimension] + zmode[dimension + 1]])
+                vector[dimension] = vector[dimension]/np.linalg.norm(vector[dimension])
+                #xmode[0], ymode[0], zmode[0] = [0,0,0]
+                xmode[dimension+1], ymode[dimension+1], zmode[dimension+1] = xmode[dimension] + vector[dimension,0], ymode[dimension] + vector[dimension,1], zmode[dimension] + vector[dimension,2]
+
+            dataLines = np.array([xmode,ymode,zmode])
+
+            tdata = np.exp(complex(0, 1) * np.linspace(0, 2 * np.pi, sizeofsimulation))
+
+            def init():
+                line, = xyzrawmodeshape.plot([], [],zs=[])
+                return line,
+
+            def animate(step):
+                xdata = dataLines[0,:]*tdata[25*step]
+                ydata = dataLines[1,:]*tdata[25*step]
+                zdata = dataLines[2,:]*tdata[25*step]
+                localvector = np.zeros((int(self.numofchannelsnew // 3 - 1),3))
+                for dimension in range(self.numofchannelsnew // 3 - 1):
+                    localvector[dimension] = np.array([-xdata[dimension] + xdata[dimension + 1], -ydata[dimension] + ydata[dimension + 1],-zdata[dimension] + zdata[dimension + 1]])
+                    localvector[dimension] = vector[dimension] / np.linalg.norm(vector[dimension])
+                    xdata[dimension + 1], ydata[dimension + 1], zdata[dimension + 1] = xdata[dimension] + vector[dimension, 0], ydata[dimension] + vector[dimension, 1], zdata[dimension] + vector[dimension, 2]
+                print(np.linalg.norm([xdata[0] - xdata[1], ydata[0] - ydata[1], zdata[0] - zdata[1]]))
+                line, = xyzrawmodeshape.plot(xdata,ydata,zs=zdata)
+                return line,
+
+
+            ani = animation.FuncAnimation(figrawmodeshape, animate, init_func=init, frames=25, repeat=True, blit=True)
+            ani.save(self.path + self.resultsfolder + self.filename[:-4] + '-modeshape-' + str(self.frequencyrange[peak]) + 'Hz.mp4', writer=writer)
+            plt.show()
+            plt.close()
+            '''
 
             #Storing new variables in a matrix
             self.efdddampingratio.append(dampingfactor)
             self.efddmodalfreqs.append(naturalfrequency)
             self.enhancedmodalshape.append(newmodalshape)
 
+
+        np.savetxt(self.path + self.resultsfolder + self.filename[:-4] + '-EFDD-modalfreqs-dampratio' + str(np.around(self.freal,1)) + 'Hzdec-.txt',
+                       [self.efddmodalfreqs,self.efdddampingratio])
+
+        np.savetxt(self.path + self.resultsfolder + self.filename[:-4] + '-EFDD-modalshapes' + str(
+            np.around(self.freal, 1)) + 'Hzdec-.txt',
+                self.enhancedmodalshape)
+        plt.close()
         return self.efddmodalfreqs, self.efdddampingratio, self.enhancedmodalshape
 
     def spectrogram(self, channel):
-        print(self.sensors,channel)
         countingch = np.array(np.where(channel in self.sensors))[0,0]
-        print(countingch)
         f, t, Sxx = signal.spectrogram(self.Victordecimated[:,countingch], fs=self.desiredmaxfreq*2)
         Sxx = np.log10(Sxx)
         fig = plt.figure(figsize=(10, 8))
@@ -604,5 +689,264 @@ class OMA(object):
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         fig.savefig(self.path + self.resultsfolder + self.filename[:-4] + '-spectogram-Ch.' +str(channel)+'.png')
-        plt.show()
-        plt.close(fig)
+        plt.close()
+
+    def calibrate(self,**kwargs):
+        self.voltagerange = kwargs.get('voltagerange', np.array([0,20])) # in V
+        self.gravityrange = kwargs.get('gravityrange', np.array([-2,2])) #in g units
+        #self.selectchannels = kwargs.get('selectchannels', np.array(np.linspace(0,self.numofchannels,endpoint=False))) #in g units
+        self.selectchannels = kwargs.get('selectchannels', np.array([9,10,11,15,16,17])) #in g units
+
+        self.Calibrateddata = np.zeros((np.size(self.Victorinput,axis=0),np.size(self.selectchannels)))
+        for channelnum in range(np.size(self.selectchannels)):
+            self.Calibrateddata[:,channelnum] = 9.80665*(np.diff(self.gravityrange)*self.Victorinput[:, self.selectchannels[channelnum]]/np.diff(self.voltagerange))
+        return self.Calibrateddata
+
+    def sensorshift(self, **kwargs):
+        #Coordinate system: center of central plane is the origin
+        #self.coordinates = kwargs.get('coordinates', np.array([[-2100,-2890,0],[1650,1650,4900],[3000,-5400,-10570]]))
+        self.coordinates = kwargs.get('coordinates',
+                                      np.array([[1.650, 1.650, 4.900], [3.000, -5.400, -10.570]]))
+        numofsensors = np.size(self.coordinates, axis=0) #for tri axial sensors
+        sizeofdata = np.size(self.Victorinput, axis=0)
+
+        self.sensordisplacement = np.zeros((np.size(self.selectchannels),sizeofdata-2))
+
+        #Calculating displacement for individual channels
+        for sensors in range(np.size(self.selectchannels)):
+            firstintegral = np.zeros(sizeofdata-1)
+            for step in range(sizeofdata-1):
+                firstintegral[step] = (self.Calibrateddata[step+1,sensors] + self.Calibrateddata[step,sensors])/(self.samplingratio*2)
+            secondintegral = np.zeros((sizeofdata-2))
+            for step in range(sizeofdata-2):
+                secondintegral[step] = (firstintegral[step+1] + firstintegral[step])/(self.samplingratio*2)
+            self.sensordisplacement[sensors] = secondintegral
+
+        #Comparing two channels to extract shift
+        self.sensorshift = np.zeros((3,numofsensors,numofsensors, sizeofdata - 2))
+        for sensors1 in range(numofsensors):
+            for sensors2 in range(numofsensors):
+                self.sensorshift[0,sensors1,sensors2] = (self.sensordisplacement[sensors1*3] - self.sensordisplacement[sensors2*3]) #/np.abs(self.coordinates[sensors2,0] - self.coordinates[sensors1,0])
+                self.sensorshift[1,sensors1,sensors2] = (self.sensordisplacement[sensors1*3+1] - self.sensordisplacement[sensors2*3+1]) #/np.abs(self.coordinates[sensors2,1] - self.coordinates[sensors1,1])
+                self.sensorshift[2,sensors1,sensors2] = (self.sensordisplacement[sensors1*3+2] - self.sensordisplacement[sensors2*3+2]) #/np.abs(self.coordinates[sensors2,2] - self.coordinates[sensors1,2])
+
+        self.sensorshiftdecimated = signal.decimate(signal.decimate(self.sensorshift, 10),10)
+        newsize = np.size(self.sensorshiftdecimated,axis=-1)
+        newtime = np.linspace(0,np.amax(self.time),newsize)
+
+
+        dimlabel = ['X axis', 'Y axis', 'Z axis']
+        for sensors1 in range(numofsensors):
+            for sensors2 in range(numofsensors):
+                if sensors2 > sensors1:
+                    figshifts = plt.figure(figsize=(15, 8))
+                    xyshifts = figshifts.add_subplot(111)
+                    for dimension in range(3):
+                        xyshifts.plot(newtime[1:],np.power(10,6)*self.sensorshiftdecimated[dimension,sensors1,sensors2].flatten()[1:], label='Shift: Ch. ' + str(sensors1+1) + '-Ch. ' + str(sensors2+1) + ' for ' + str(dimlabel[dimension]))
+                    xyshifts.set_title('Shift between sensors', fontsize=15)
+                    xyshifts.set_ylabel(r'Shift ($\mu$m)', fontsize=15)
+                    xyshifts.set_xlabel('Time(s)', fontsize=15)
+                    plt.xticks(fontsize=15)
+                    plt.yticks(fontsize=15)
+                    plt.legend()
+                    figshifts.savefig(self.path + self.resultsfolder + self.filename[:-4] + 'Shift: Ch. ' + str(sensors1+1) + '-Ch. ' + str(sensors2+1) + '.png')
+                    np.savetxt(self.path + self.resultsfolder + self.filename[:-4] + 'Shift: Ch. ' + str(sensors1+1) + '-Ch. ' + str(sensors2+1) + '.txt',self.sensorshiftdecimated[:,sensors1,sensors2])
+                    plt.close()
+        return self.sensorshiftdecimated
+
+class Weather(object):
+#This class analyses the weather data to give a quality check for the accelerometers data set
+
+    def __init__(self, weatherfilename):
+        self.weatherdatafile = weatherfilename
+        self.homefolder = os.path.normpath(os.getcwd()) #home directory of the system
+        self.weatherdatafolder = self.homefolder + "/data/weather/" #folder in which it is supposed to be stored the weather data files
+
+        #Seting directories
+        self.resultsfolder = '/output/onefileanalysis/weather/'
+        try:
+            os.makedirs(self.homefolder + self.resultsfolder)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+    def Analysis(self, **kwargs):
+        self.timeofacquisition = kwargs.get('timeofacquisition', (0,24))
+        self.weatherinfo = np.loadtxt(self.weatherdatafolder + self.weatherdatafile, delimiter='\t', skiprows=1, dtype=float)
+        self.sizeoffile = np.size(self.weatherinfo,axis=0)
+        variablenames = ['time', 'outsidetemperature', 'insidetemperature', 'outsidehumidity', 'insidehumidity', 'pressure',
+                         'windspeed', 'winddirection', 'avgwindspeed', 'rainrate']
+        self.dictofvariables = {}
+        monthdict = {1: "Jan.", 2: "Feb.", 3: "Mar.", 4: "Apr.", 5: "May", 6: "Jun.", 7: "Jul.", 8: "Aug.", 9: "Sep.",
+                     10: "Okt.", 11: "Nov.", 12: "Dez"}
+
+        for column in range(np.size(self.weatherinfo, axis=1)):
+            self.dictofvariables[variablenames[column]] = self.weatherinfo[:, column]
+
+        #Time
+        self.dictofvariables['time'] = 24*(self.dictofvariables['time'] - self.dictofvariables['time'][0])/(self.dictofvariables['time'][-1] - self.dictofvariables['time'][0])
+        self.condition = (self.dictofvariables['time']>self.timeofacquisition[0])*(self.dictofvariables['time']<self.timeofacquisition[1]) == 1
+        self.time = self.dictofvariables['time'][self.condition]
+
+        #Temperature
+        figtemperature = plt.figure(figsize=(8, 6))
+        xytemperature = figtemperature.add_subplot(111)
+        self.outsidetemperature = self.dictofvariables['outsidetemperature'][self.condition]
+        self.insidetemperature = self.dictofvariables['insidetemperature'][self.condition]
+
+        nonzeroouttemp = self.outsidetemperature != 0
+        self.outsidetemperature = self.outsidetemperature[nonzeroouttemp]
+        nonzerointemp = self.insidetemperature != 0
+        self.insidetemperature = self.dictofvariables['insidetemperature'][self.condition]
+        self.insidetemperature = self.insidetemperature[nonzerointemp]
+
+        xytemperature.plot(self.time[nonzeroouttemp],self.outsidetemperature ,
+                    label='outside temperature', linewidth=0.5)
+        xytemperature.plot(self.time[nonzerointemp], self.insidetemperature,
+                    label='inside temperature', linewidth=0.5)
+        xytemperature.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
+        xytemperature.set_xlabel('Time (h)', fontsize=15)
+        xytemperature.set_ylabel('Temperature (°C)', fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        self.month = monthdict[int(self.weatherdatafile[15:17])]
+        self.day = str(self.weatherdatafile[17:19])
+        self.year = str(self.weatherdatafile[11:15])
+        xytemperature.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
+        plt.legend(fontsize=15)
+        figtemperature.savefig(self.homefolder + self.resultsfolder + self.year + self.month + self.day + 'temperature.png')
+        plt.close()
+
+        #Humidity
+        fighumidity = plt.figure(figsize=(8,6))
+        xyhumidity = fighumidity.add_subplot(111)
+        self.outhumidity = self.dictofvariables['outsidehumidity'][self.condition]
+        self.inhumidity = self.dictofvariables['insidehumidity'][self.condition]
+        nonzeroouthum = self.outhumidity!=0
+        nonzeroinhum = self.inhumidity !=0
+        self.outhumidity = self.outhumidity[nonzeroouthum]
+        self.inhumidity = self.inhumidity[nonzeroinhum]
+
+        xyhumidity.plot(self.time[nonzeroouthum],self.outhumidity, label='outside humidity')
+        xyhumidity.plot(self.time[nonzeroinhum],self.inhumidity, label='inside humidity')
+        xyhumidity.set_xlim(self.timeofacquisition[0],self.timeofacquisition[1])
+        xyhumidity.set_xlabel('Time (h)',fontsize=20)
+        xyhumidity.set_ylabel('Relative humidity (%)',fontsize=20)
+        xyhumidity.set_title(self.month + ', ' + self.day + ', ' + self.year , fontsize=20)
+        plt.legend(fontsize=15)
+        fighumidity.savefig(self.homefolder+self.resultsfolder+self.year+self.month+self.day+'humidity.png')
+        plt.close()
+
+        #Pressure
+        figpressure = plt.figure(figsize=(8,6))
+        xypressure = figpressure.add_subplot(111)
+        self.pressure = self.dictofvariables['pressure'][self.condition]
+        nonzeropressure = self.pressure!=0
+        xypressure.scatter(self.time[nonzeropressure],self.pressure[nonzeropressure], label='Pressure', linewidth=1)
+        xypressure.set_xlim(self.timeofacquisition[0],self.timeofacquisition[1])
+        xypressure.set_xlabel('Time (h)',fontsize=15)
+        xypressure.set_ylabel('Pressure (mm Hg)',fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        xypressure.set_title(self.month + ', ' + self.day + ', ' + self.year , fontsize=15)
+        plt.legend(fontsize=15)
+        figpressure.savefig(self.homefolder+self.resultsfolder+self.year+self.month+self.day+'pressure.png')
+        plt.close()
+
+        #Wind
+        figwind = plt.figure(figsize=(8,8))
+        xywind = figwind.add_subplot(111)
+        self.windspeed = self.dictofvariables['windspeed'][self.condition]
+        maxspeed = np.amax(self.windspeed)
+        self.winddirection = self.dictofvariables['winddirection'][self.condition]
+
+        for step in range(np.size(self.winddirection)):
+            #Defining direction of the wind
+            '''if (self.winddirection[step]>0) & (self.winddirection[step]<90):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step]) > 90 & (self.winddirection[step] < 180):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step] > 180) & (self.winddirection[step] < 270):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step] > 270) & (self.winddirection[step] < 360):'''
+            xdirec = np.cos(np.pi / 180 * self.winddirection[step])
+            ydirec = np.sin(np.pi / 180 * self.winddirection[step])
+
+            #Drawing lines in the diagram
+            windarrowx = [0, self.windspeed[step]*xdirec]
+            windarrowy = [0, self.windspeed[step]*ydirec]
+            linewind = mlines.Line2D(windarrowx, windarrowy, c='red')
+            xywind.add_line(linewind)
+        circle = plt.Circle((0,0),maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(maxspeed,1)-.45,0,str(np.around(maxspeed,1)))
+        onethirdcircle = plt.Circle((0,0),1/3*maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(1/3*maxspeed,1)-.45,0,str(np.around(1/3*maxspeed,1)))
+        twothirdscircle = plt.Circle((0, 0), 2/3 * maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(2/3 * maxspeed,1)-.45, 0, str(np.around(2/3 * maxspeed,1)))
+        xywind.add_artist(circle)
+        xywind.add_artist(onethirdcircle)
+        xywind.add_artist(twothirdscircle)
+        xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h',fontsize=15)
+        xywind.set_xlim(-maxspeed,maxspeed)
+        xywind.set_ylim(-maxspeed,maxspeed)
+        xywind.set_xlabel('Wind speed X-direction (m/s)',fontsize=15)
+        xywind.set_ylabel('Wind speed Y-direction (m/s)',fontsize=15)
+        figwind.savefig(self.homefolder+self.resultsfolder+self.year+self.month+self.day+'wind.png')
+        plt.close()
+
+        #Rain rate
+        figrainrate = plt.figure(figsize=(8,8))
+        xyrainrate = figrainrate.add_subplot(111)
+        self.rainrate = self.dictofvariables['rainrate'][self.condition]
+        nonzeropressure = self.pressure!=0
+        xyrainrate.scatter(self.time,self.rainrate, label='Rain rate', linewidth=1)
+        xyrainrate.set_xlim(self.timeofacquisition[0],self.timeofacquisition[1])
+        xyrainrate.set_xlabel('Time (h)',fontsize=15)
+        xyrainrate.set_ylabel('Rain rate',fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        xyrainrate.set_title(self.month + ', ' + self.day + ', ' + self.year , fontsize=15)
+        plt.legend(fontsize=15)
+        figrainrate.savefig(self.homefolder+self.resultsfolder+self.year+self.month+self.day+'rainrate.png')
+        #plt.show()
+        plt.close()
+
+    def Statistics(self):
+
+        #Statistics
+        self.variables = [self.outsidetemperature, self.insidetemperature, self.outhumidity, self.inhumidity, self.pressure, self.windspeed, self.winddirection, self.rainrate]
+        self.numofvariables = np.size(self.variables, axis=0)
+        dicttreateddata = {v: self.variables[v] for v in range(self.numofvariables)}
+        self.meanvalues, self.variance, self.minvalues, self.maxvalues = [np.zeros(self.numofvariables) for i in range(4)]
+        for variablenum in range(self.numofvariables):
+            describedstats = scipy.stats.describe(dicttreateddata[variablenum])
+            self.meanvalues[variablenum] = describedstats.mean
+            self.variance[variablenum] = describedstats.variance
+            self.minvalues[variablenum] = describedstats.minmax[0]
+            self.maxvalues[variablenum] = describedstats.minmax[1]
+            print(describedstats)
+        return self.meanvalues, self.variance, self.minvalues, self.maxvalues
+
+    def Qualitycheck(self, **kwargs):
+        self.windmeanthreshold = kwargs.get('windthreshold', 1.1)
+        self.winddirminvariance = kwargs.get('winddirminvariance', 180)
+
+        WindSpeedFlag, WindDirectionFlag = 0,0
+        if self.meanvalues[5] >= self.windmeanthreshold:
+            WindSpeedFlag = 1
+        else:
+            WindSpeedFlag = 0
+            print('Wind is not strong enough for data taking on ' + str(self.month) + ', ' + str(self.day) + ', ' + str(self.year) + ' from ' + str(self.timeofacquisition[0]) + 'h to ' + str(self.timeofacquisition[1]) + 'h')
+            print('This dataset will be excluded from analysis!')
+
+        if self.variance[6] >= self.winddirminvariance:
+            WindDirectionFlag = 1
+        else:
+            WindDirectionFlag = 0
+            print('Wind direction did not vary much for data taking on ' + str(self.month) + ', ' + str(self.day) + ', ' + str(self.year) + ' from ' + str(self.timeofacquisition[0]) + 'h to ' + str(self.timeofacquisition[1]) + 'h')
+            print('This dataset will be excluded from analysis!')
+
+        return WindSpeedFlag, WindDirectionFlag
