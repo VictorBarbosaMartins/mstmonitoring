@@ -3,6 +3,11 @@
 This Project aim to develop a system, which is able to deliver important information about the telescope structure. The analysis and the reports are generated automatically. The system should be able to detect changes in the structure such as variations in the rope tensions and other structure damages. The local team should receive a report when any change is detected and should act accordingly on it to avoid further damages to the telescopes.
 
 ## What's new
+
+### V. 0.0.3: August, 12th 2019
+Victor Barbosa Martins
+Implemented Tracking
+
 ### V. 0.0.2: July, 30th 2019
 Victor Barbosa Martins
 Finished damping branch
