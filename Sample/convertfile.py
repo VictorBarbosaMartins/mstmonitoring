@@ -4,7 +4,7 @@ import re
 import struct
 from datetime import datetime, timedelta
 from glob import glob
-
+import errno
 import numpy as np
 
 import definitions as names
@@ -262,7 +262,7 @@ class UDBFParser(object):
             raise IOError
 
     def SetUDBFFile(self, infile):
-        self._checkInfile(infile)
+        # self._checkInfile(infile)
         self.logger.debug("Reading " + infile)
         try:
             data_file = open(infile, mode="rb")
@@ -375,7 +375,14 @@ class Manipulatedata(object):
     def __init__(self, **kwargs):
         self.path = os.environ["MST-STR-MON-HOME"] + '/'
         self.datafolder = os.environ["MST-STR-MON-DATA"] + '/'
+        self.datafolderresults = os.environ["MST-STR-MON-DATA-CONVERTED"] + '/'
         self.numofchannels = kwargs.get('numofchindata', 24)
+
+        try:
+            os.makedirs(self.datafolderresults)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
     def convertascii(self, IN, OUT):
         if os.path.isfile(OUT):
@@ -410,57 +417,64 @@ class Manipulatedata(object):
 
     def convertallascii(self, **kwargs):
         self.searchstring = kwargs.get('searchstring', "*")
-        self.datfilenames = np.sort(glob(self.path + "/data/" + self.searchstring + ".dat"))
+
+        self.datfilenames = np.sort(glob(self.datafolder + self.searchstring + ".dat"))
         for filename in self.datfilenames:
-            outfileascii = self.datafolder + os.path.basename(filename)[:-4] + '.ascii'
+            print(filename)
+            outfileascii = self.datafolderresults + os.path.basename(filename)[:-4] + '.ascii'
             Manipulatedata.convertascii(self, IN=filename, OUT=outfileascii)
         print("Finished conversion to ASCII of all files!")
 
     def convertalltxt(self, **kwargs):
         self.searchstring = kwargs.get('searchstring', "*")
-        self.asciifilenames = np.sort(glob(self.path + "/data/" + self.searchstring + "*.ascii"))
+        self.asciifilenames = np.sort(glob(self.datafolder + self.searchstring + "*.ascii"))
         for filename in self.asciifilenames:
             outfiletxt = self.datafolder + os.path.basename(filename)[:-4] + '.txt'
             Manipulatedata.converttxt(self, IN=filename, OUT=outfiletxt)
         print("Finished conversion to TXT of all files!")
 
-    def mergefiles(self, date, **kwargs):
+    def mergefiles(self, date, OUT, **kwargs):
         rangeoffiles = kwargs.get('rangeoffiles', [0, -1])
         self.searchstring = kwargs.get('searchstring', "structure*6.100*")
-        self.fnames = np.sort(glob(self.datafolder + self.searchstring + date + "*.ascii"))
-        if rangeoffiles[1] == -1:
-            self.fnames = self.fnames[rangeoffiles[0]:]
+        self.fnames = np.sort(glob(self.datafolderresults + self.searchstring + date + "*.ascii"))
+
+        if os.path.isfile(OUT):
+            print("File " + OUT + " already exists.")
         else:
-            self.fnames = self.fnames[rangeoffiles[0]:rangeoffiles[1]]
-        outarray = 0
-        counter = 0
-        for file in self.fnames:
-            rawdata = np.loadtxt(file, delimiter='\t', dtype=str)
-            rawdata = rawdata[2:]
-            size = np.size(rawdata, axis=0)
-            array = np.zeros((size, self.numofchannels))
 
-            for line in range(size):
-                text = [x.strip() for x in rawdata[line].split(' ')]
-                text = text[2:]
-                if text[-1] == '':
-                    text2 = text[:-1]
+            # if rangeoffiles[1] == -1:
+            # self.fnames = self.fnames[rangeoffiles[0]:]
+            # else:
+            # self.fnames = self.fnames[rangeoffiles[0]:rangeoffiles[1]]
+            outarray = 0
+            counter = 0
+            for file in self.fnames[rangeoffiles[0]:rangeoffiles[1]]:
+                rawdata = np.loadtxt(file, delimiter='\t', dtype=str)
+                rawdata = rawdata[2:]
+                size = np.size(rawdata, axis=0)
+                array = np.zeros((size, self.numofchannels))
+
+                for line in range(size):
+                    text = [x.strip() for x in rawdata[line].split(' ')]
+                    text = text[2:]
+                    if text[-1] == '':
+                        text2 = text[:-1]
+                    else:
+                        text2 = text
+                    array[line] = text2
+
+                if (counter == 0):
+                    np.resize(outarray, np.shape(array))
+                    outarray = array
                 else:
-                    text2 = text
-                array[line] = text2
-
-            if (counter == 0):
-                np.resize(outarray, np.shape(array))
-                outarray = array
-            else:
-                outarray = np.append(outarray, array, axis=0)
-            counter = counter + 1
-            print(np.shape(outarray))
-        self.redate = (re.search(r'\d{4}-\d{2}-\d{2}', os.path.basename(self.fnames[0])))
-        initialdate = str(self.redate.group())
-        np.savetxt(self.datafolder + os.path.basename(self.fnames[0])[:85] + '_' + initialdate + '_' + str(
-            np.size(self.fnames)) + names.MERGING + '.txt', outarray)
-        print("Merging files for one day finished!")
+                    outarray = np.append(outarray, array, axis=0)
+                counter = counter + 1
+                print(np.shape(outarray))
+            self.redate = (re.search(r'\d{4}-\d{2}-\d{2}', os.path.basename(self.fnames[0])))
+            initialdate = str(self.redate.group())
+            # np.savetxt(self.datafolderresults + os.path.basename(self.fnames[0])[:85] + '_' + initialdate + '_' + str(np.size(self.fnames[rangeoffiles[0]:rangeoffiles[1]])) + names.MERGING + '.txt', outarray)
+            np.savetxt(OUT, outarray)
+            print("Merging files for one day finished!")
 
     def mergefilesall(self, dates, **kwargs):
         rangeoffiles = kwargs.get('rangeoffiles', [0, -1])
@@ -468,7 +482,8 @@ class Manipulatedata(object):
 
         self.initialdate = datetime(int(dates[0][:4]), int(dates[0][5:7]), int(dates[0][8:10]))
         self.finaldate = datetime(int(dates[1][:4]), int(dates[1][5:7]), int(dates[1][8:10]))
-        self.asciifilenames = np.sort(glob(self.datafolder + searchstring + "*.ascii"))
+        self.asciifilenames = np.sort(glob(self.datafolderresults + searchstring + "*.ascii"))
+        print(self.asciifilenames)
         self.sizeoffiles = np.size(self.asciifilenames)
         self.datestring = np.zeros((self.sizeoffiles)).astype(str)
         self.localdates = np.zeros((self.sizeoffiles)).astype(datetime)
@@ -481,13 +496,16 @@ class Manipulatedata(object):
                                                  int(self.datestring[eachdate][8:10]))
 
         self.localdates = np.unique(np.sort(self.localdates))
-        self.datestring = np.unique(np.sort(self.datestring))
+        self.datestring, countfilesperday = np.unique(np.sort(self.datestring), return_counts=True)
+        print(countfilesperday)
 
         counter = 0
         for date in self.localdates:
             print(date)
             if date >= self.initialdate and date <= self.finaldate:
-                Manipulatedata.mergefiles(self, date=self.datestring[counter], range=rangeoffiles,
+                OUT = self.datafolderresults + self.datestring[counter] + '_' + str(
+                    np.size(range(rangeoffiles[0], rangeoffiles[1]))) + names.MERGING + '.txt'
+                Manipulatedata.mergefiles(self, date=self.datestring[counter], OUT=OUT, rangeoffiles=rangeoffiles,
                                           searchstring=searchstring)
             counter = counter + 1
         print("Merging files for all days finished!")

@@ -3,10 +3,13 @@ import os
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+plt.switch_backend('agg')
 import numpy as np
 from scipy import signal
 from sklearn import preprocessing
-
+from scipy.optimize import curve_fit
 import definitions as names
 
 
@@ -21,7 +24,7 @@ class OMA(object):
     def __init__(self, filename):
         self.filename = filename
         # self.path = os.path.normpath(os.getcwd() + os.sep + os.pardir)
-        self.path = os.environ["MST-STR-MON-DATA"] + '/'
+        self.path = os.environ["MST-STR-MON-DATA-CONVERTED"] + '/'
 
         self.samplingratio = 100  # Samp. ratio = 100 Hz. You can change it, but it should be a defined value forever
         # self.Victorinput = np.loadtxt(self.path + '/data/' + self.filename, delimiter=' ', dtype=float)
@@ -52,18 +55,30 @@ class OMA(object):
                 if e.errno != errno.EEXIST:
                     raise
 
+    def delete_results(self):
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.png'
+        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.png'
+        for string in [self.OUT, self.OUTFDDFIG]:
+            try:
+                #Delete results so the analysis can be ran again.
+                os.remove(string)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+        return 0
+
     def rawdataplot18(self):
         '''Plot 18 channels in one window.
         to do: Remove/alter function once the number of available channels changes'''
 
         filename = self.filename
-        OUT = self.rawdatafolder + filename[:-4] + names.RAW_ALL + '.png'
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.png'
 
-        if os.path.isfile(OUT):
-            print("File " + OUT + " already exists.")
-            DONTRUNFLAG = 1
+        if os.path.isfile(self.OUT):
+            print("File " + self.OUT + " already exists.")
+            self.DONTRUNFLAG = 1
         else:
-            DONTRUNFLAG = 0
+            self.DONTRUNFLAG = 0
             Victorinput = self.Victorinput
             time = np.linspace(0, self.N * self.dt, self.N)
             f0 = plt.figure(figsize=(15, 8))
@@ -90,15 +105,15 @@ class OMA(object):
             xyi[1].set_title('Raw data', fontsize=15)
             xyi[6].set_ylabel('Acceleration (mA)', fontsize=15)
             xyi[16].set_xlabel('Time(s)', fontsize=15)
-            f0.savefig(OUT)
+            f0.savefig(self.OUT)
             plt.close(f0)
-        return DONTRUNFLAG
+        return self.DONTRUNFLAG
 
     def rawdataplot(self, channel):
         '''Plot the raw data for one channel from 1 to number max. of channels'''
-        OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_CH + str(self.channel) + '.png'
-        if os.path.isfile(OUT):
-            print("File " + OUT + " already exists.")
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_CH + str(self.channel) + '.png'
+        if os.path.isfile(self.OUT):
+            print("File " + self.OUT + " already exists.")
             DONTRUNFLAG = 1
         else:
             DONTRUNFLAG = 0
@@ -111,7 +126,7 @@ class OMA(object):
             plt.yticks(fontsize=15)
             plt.grid()
             xyi.set_xlabel('Time(s)', fontsize=15)
-            f0.savefig(OUT)
+            f0.savefig(self.OUT)
             plt.close(f0)
         return DONTRUNFLAG
 
@@ -158,12 +173,12 @@ class OMA(object):
             sinbeta = np.sin(turnaroundzaxis[sensor])
             # One rotation in Y, one rotation in X, one rotation in Z
             self.Calibrateddata[:, sensor * 3:(sensor + 1) * 3] = np.array([
-                                                                               cosbeta * xaxis * cosphi + cosbeta * sinphi * zaxis + sinbeta * costheta * yaxis + sinbeta * sintheta * (
-                                                                                           -sinphi * xaxis + cosphi * zaxis),
-                                                                               -xaxis * cosphi * sinbeta - sinbeta * sinphi * zaxis + cosbeta * costheta * yaxis + cosbeta * sintheta * (
-                                                                                           -sinphi * xaxis + cosphi * zaxis),
-                                                                               (-sintheta) * yaxis + costheta * (
-                                                                                           -sinphi * xaxis + cosphi * zaxis)]).transpose()
+                cosbeta * xaxis * cosphi + cosbeta * sinphi * zaxis + sinbeta * costheta * yaxis + sinbeta * sintheta * (
+                        -sinphi * xaxis + cosphi * zaxis),
+                -xaxis * cosphi * sinbeta - sinbeta * sinphi * zaxis + cosbeta * costheta * yaxis + cosbeta * sintheta * (
+                        -sinphi * xaxis + cosphi * zaxis),
+                (-sintheta) * yaxis + costheta * (
+                        -sinphi * xaxis + cosphi * zaxis)]).transpose()
 
         # For sensors on CSS and dish invert Y and Z
         for channels in [1, 2, 7, 8]:  # Y and Z for each sensor
@@ -206,14 +221,13 @@ class OMA(object):
         self.left, self.right = [
             np.zeros((numberoffreqlines, self.numofchannelsnew, self.numofchannelsnew)) for i in range(2)]
 
-        OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + str(self.sensors) + '-' + str(
-            np.around(self.freal, 1)) + 'Hzdec.png'
+        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.png'
 
         self.DONTRUNFLAG = 0
 
-        if os.path.isfile(OUTFDDFIG):
+        if os.path.isfile(self.OUTFDDFIG):
             self.DONTRUNFLAG = 1
-            print("File " + OUTFDDFIG + " already exists.")
+            print("File " + self.OUTFDDFIG + " already exists.")
             print("If you wish to run analysis, please delete results")
             return 0, 0, 0, 0, self.DONTRUNFLAG
         else:
@@ -267,7 +281,7 @@ class OMA(object):
             plt.xlim(0, self.desiredmaxfreq)
             plt.ylim(-120, -30)
             plt.title('OMA spectrum', fontsize=15)
-            fig.savefig(OUTFDDFIG)
+            fig.savefig(self.OUTFDDFIG)
             np.savetxt(self.resultsfolder + self.filename[:-4] + names.FDD + str(self.sensors) + '-' + str(
                 np.around(self.freal, 1)) + 'Hzdec-singvalues.txt',
                        self.Victorsingularvalues)
@@ -307,7 +321,7 @@ class OMA(object):
         self.distance = kwargs.get('distance', 10)  # Minimum distance between peaks
         self.width = kwargs.get('width', 3)  # Minimum width for the peak
 
-        size = np.size((self.singvaluesindecb), axis=0)
+        #size = np.size((self.singvaluesindecb), axis=0)
         numofchannelsforpeaks = np.size((self.singvaluesindecb), axis=1)
         self.peaksstorage = []
         numberoffreqlines = np.size(self.Victorsingularvalues, axis=0)
@@ -479,7 +493,7 @@ class OMA(object):
             for newpeak2 in range(newnumberofpeaks):
                 newMACmatrix[newpeak1, newpeak2] = MAC[goodindexinmodalfreq[newpeak1], goodindexinmodalfreq[newpeak2]]
         self.goodindexinfullrange = np.reshape(goodindexinfullrange, (
-        1, np.size(goodindexinfullrange)))  # to fit the same shape of self.peakstorage
+            1, np.size(goodindexinfullrange)))  # to fit the same shape of self.peakstorage
         # print(newmodalfreq)
         return newmodalfreq, self.goodindexinfullrange, newMACmatrix
 
@@ -513,11 +527,11 @@ class OMA(object):
                 MACforward, MACbackward = 1., 1.
                 while MACforward >= self.enhancedmaclimit or MACbackward >= self.enhancedmaclimit:
                     MACforward = np.square(np.dot(self.left[peak, :, 0], self.left[freqforward, :, line])) / (
-                                np.dot(self.left[peak, :, 0], self.left[peak, :, 0]) * np.dot(
-                            self.left[freqforward, :, line], self.left[freqforward, :, line]))
+                            np.dot(self.left[peak, :, 0], self.left[peak, :, 0]) * np.dot(
+                        self.left[freqforward, :, line], self.left[freqforward, :, line]))
                     MACbackward = np.square(np.dot(self.left[peak, :, 0], self.left[freqbackward, :, line])) / (
-                                np.dot(self.left[peak, :, 0], self.left[peak, :, 0]) * np.dot(
-                            self.left[freqbackward, :, line], self.left[freqbackward, :, line]))
+                            np.dot(self.left[peak, :, 0], self.left[peak, :, 0]) * np.dot(
+                        self.left[freqbackward, :, line], self.left[freqbackward, :, line]))
 
                     if freqforward < np.size(self.frequencyrange) and MACforward >= self.enhancedmaclimit:
                         storeindexes[line].append(freqforward)
@@ -556,6 +570,19 @@ class OMA(object):
             fig.savefig(self.resultsfolder + self.filename[:-4] + names.BELLSHAPE + '-' + str(
                 np.around(self.frequencyrange[peak], decimals=2)) + 'Hz.png')
             plt.close()
+            # if self.frequencyrange[peak] > 1:
+
+            '''#Verify if the Bell curve is a gaussian distribution
+            def Gauss(x, a, x0, sigma):
+                return a * np.exp(-(x - x0)**2 / (2 * sigma**2))
+            storeindexes[0] =  np.unique(storeindexes[0])
+            print(storeindexes[0])
+            print(bellfunction[storeindexes[0]])
+            popt,pcov = curve_fit(Gauss, self.frequencyrange[storeindexes[0]], bellfunction[storeindexes[0]], p0=[max(bellfunction[storeindexes[0]]), np.mean(bellfunction[storeindexes[0]]), np.std(bellfunction[storeindexes[0]])])
+            print("The covariance of the Bell function fit is:",pcov)
+            #plt.plot(self.frequencyrange[storeindexes[0]],bellfunction[storeindexes[0]])
+            #plt.plot(self.frequencyrange[storeindexes[0]],Gauss(self.frequencyrange[storeindexes[0]],popt[0],popt[1],popt[2]))
+            #plt.show()'''
 
             # Derive the Correlation function from the bell curve
             correlationfunc = np.fft.ifft(np.append(bellfunction, bellfunction[
@@ -571,12 +598,14 @@ class OMA(object):
             correlationpeakspositive, _ = signal.find_peaks(normcorrelationfunc, distance=1)  # Finding maximum
             correlationpeaksnegative, _ = signal.find_peaks(-normcorrelationfunc, distance=1)  # Finding minimum
             correlationpeaks = np.append(correlationpeakspositive, correlationpeaksnegative)
+
             # correlationpeaks = correlationpeakspositive
             correlationpeaks = np.sort(np.array(correlationpeaks).flatten())
 
             # Start counting the good indexes whenever we have at least 3 consecutive peaks inside the ROI
             consecutivepeaks = 3
             goodindexes = []
+
             for indexinpeaks in range(np.size(correlationpeaks) - consecutivepeaks):
                 atleast3peaksinroi = np.abs(
                     normcorrelationfunc[correlationpeaks[indexinpeaks:indexinpeaks + consecutivepeaks]])
@@ -585,88 +614,109 @@ class OMA(object):
                 if (condition1 == True and condition2 == True):
                     goodindexes.append(indexinpeaks)
             goodindexes = np.unique(goodindexes).flatten()
+
             totalnumofpeaks = np.size(correlationpeaks)
-            totalnumofpeaksintheroi = np.size(correlationpeaks[goodindexes[0]:goodindexes[-1] + 1])
-            numofthepeaks = np.linspace(1, totalnumofpeaks, totalnumofpeaks, endpoint=True, dtype=int)
-            logdecfsitparam = np.polyfit(numofthepeaks[goodindexes],
-                                         2 * np.log(np.abs(normcorrelationfunc[correlationpeaks[goodindexes]])), deg=1)
-            fittedlogdec = np.polyval(logdecfsitparam, numofthepeaks[goodindexes])
-            logdecfactor = logdecfsitparam[0]
+            #totalnumofpeaksintheroi = np.size(correlationpeaks[goodindexes[0]:goodindexes[-1] + 1])
 
-            # Plot the LogDec
-            fig3 = plt.figure(figsize=(10, 8))
-            xyi3 = fig3.add_subplot(111)
-            xyi3.scatter(time[correlationpeaks], 2 * np.log(np.abs(normcorrelationfunc[correlationpeaks])), marker='+',
-                         label='data')
-            xyi3.plot(time[correlationpeaks[goodindexes]], fittedlogdec, c='red', label='linear fitting')
-            xyi3.set_xlabel('Time lag (s)', fontsize=15)
-            xyi3.set_ylabel(r'$ ln|r_{k_{0}}/r_{k}|$', fontsize=15)
-            xyi3.set_title('LogDec estimation - peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
-                           fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            plt.legend()
-            fig3.savefig(self.resultsfolder + self.filename[:-4] + names.LOGDEC + '-' + str(
-                np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
-            plt.close()
+            if np.size(goodindexes) >= 3: #at least three data points in the ROI
+            #for 30.09.2019 the first mode rapidly decay, and there is no point in this ROI
+                numofthepeaks = np.linspace(1, totalnumofpeaks, totalnumofpeaks, endpoint=True, dtype=int)
 
-            # Estimate damping factor from the LogDec factor
-            # dampingfactor = logdecfactor/np.sqrt(np.square(logdecfactor) + 4*np.square(np.pi))
-            dampingfactor = 1 / (np.sqrt(1 + np.square(2 * np.pi / logdecfactor)))
-            print('dampingfactor', dampingfactor)
+                logdecfsitparam = np.polyfit(numofthepeaks[goodindexes],
+                                             2 * np.log(np.abs(normcorrelationfunc[correlationpeaks[goodindexes]])), deg=1)
 
-            '''def expdecay(x,a,b):
-                return a*np.exp(b*x)
-            popt, pcov = curve_fit(expdecay,time[1+roipeaks[1:]],np.abs(normcorrelationfunc[roipeaks[1:]]), p0=[1,-0.01])
-            print(popt)'''
+                fittedlogdec = np.polyval(logdecfsitparam, numofthepeaks[goodindexes])
+                logdecfactor = logdecfsitparam[0]
 
-            # Plot the Correlation function (damping curve)
-            fig2 = plt.figure(figsize=(10, 8))
-            xyi2 = fig2.add_subplot(111)
-            xyi2.plot(time[1:], normcorrelationfunc, linewidth=2.5, label='Autocorr. function')
-            xyi2.scatter(time[correlationpeaks[goodindexes]], normcorrelationfunc[correlationpeaks[goodindexes]],
-                         marker='+', color='black')
-            xyi2.plot(time[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
-                      normcorrelationfunc[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
-                      linewidth=3, c='red', label='ROI')
-            # xyi2.plot(time[1+roi], 0.4+np.exp(-decayfactor*roi), linewidth=3, c='green', label='decay envelope')
+                # Plot the LogDec
+                fig3 = plt.figure(figsize=(10, 8))
+                xyi3 = fig3.add_subplot(111)
+                xyi3.scatter(time[correlationpeaks], 2 * np.log(np.abs(normcorrelationfunc[correlationpeaks])), marker='+',
+                             label='data')
+                xyi3.plot(time[correlationpeaks[goodindexes]], fittedlogdec, c='red', label='linear fitting')
+                xyi3.set_xlabel('Time lag (s)', fontsize=15)
+                xyi3.set_ylabel(r'$ ln|r_{k_{0}}/r_{k}|$', fontsize=15)
+                xyi3.set_title('LogDec estimation - peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
+                               fontsize=15)
+                plt.xticks(fontsize=15)
+                plt.yticks(fontsize=15)
+                plt.legend()
+                fig3.savefig(self.resultsfolder + self.filename[:-4] + names.LOGDEC + '-' + str(
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                plt.close()
 
-            # xyi2.plot(time[1+roipeaks[1:]],expdecay(roipeaks[1:],popt[0],popt[1]))
+                # Estimate damping factor from the LogDec factor
+                # dampingfactor = logdecfactor/np.sqrt(np.square(logdecfactor) + 4*np.square(np.pi))
+                dampingfactor = 1 / (np.sqrt(1 + np.square(2 * np.pi / logdecfactor)))
+                print('dampingfactor', dampingfactor)
 
-            xyi2.set_xlabel('Time (s)', fontsize=15)
-            xyi2.set_ylabel('Normalized intensity (a.u.)', fontsize=15)
-            xyi2.set_title(
-                'Autocorrelation function for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
-                fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            fig2.savefig(self.resultsfolder + self.filename[:-4] + names.AUTOCORREL + '-' + str(
-                np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
-            plt.close()
+                '''def expdecay(x,a,b):
+                    return a*np.exp(b*x)
+                popt, pcov = curve_fit(expdecay,time[1+roipeaks[1:]],np.abs(normcorrelationfunc[roipeaks[1:]]), p0=[1,-0.01])
+                print(popt)'''
 
-            # Crossing times and natural frequency
-            fig4 = plt.figure(figsize=(10, 8))
-            xyi4 = fig4.add_subplot(111)
-            zerocrossings = np.where(np.diff(np.signbit(normcorrelationfunc)))[0]
-            maxofcrossing = np.size((zerocrossings))
-            numberofcrossings = np.linspace(1, maxofcrossing, maxofcrossing)
-            xyi4.plot(time[1 + zerocrossings], numberofcrossings)
-            pvar = np.polyfit(time[1 + zerocrossings], numberofcrossings, deg=1)
-            dampedfreq = pvar[0] / 2
-            print('dampedfreq', dampedfreq)
-            xyi4.set_xlabel('Time (s)', fontsize=15)
-            xyi4.set_ylabel('Zero crossing', fontsize=15)
-            xyi4.set_title('Zero crossing for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
-                           fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            fig4.savefig(self.resultsfolder + self.filename[:-4] + names.ZEROCROSSING + '-' + str(
-                np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
-            plt.close()
-            naturalfrequency = dampedfreq / np.sqrt(1 - np.square(dampingfactor))
-            decayfactor = dampingfactor * naturalfrequency
-            print('naturalfrequency', naturalfrequency)
-            print('decayfactor', decayfactor)
+                # Plot the Correlation function (damping curve)
+                fig2 = plt.figure(figsize=(10, 8))
+                xyi2 = fig2.add_subplot(111)
+                xyi2.plot(time[1:], normcorrelationfunc, linewidth=2.5, label='Autocorr. function')
+                xyi2.scatter(time[correlationpeaks[goodindexes]], normcorrelationfunc[correlationpeaks[goodindexes]],
+                             marker='+', color='black')
+                xyi2.plot(time[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
+                          normcorrelationfunc[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
+                          linewidth=3, c='red', label='ROI')
+                # xyi2.plot(time[1+roi], 0.4+np.exp(-decayfactor*roi), linewidth=3, c='green', label='decay envelope')
+
+                # xyi2.plot(time[1+roipeaks[1:]],expdecay(roipeaks[1:],popt[0],popt[1]))
+
+                xyi2.set_xlabel('Time (s)', fontsize=15)
+                xyi2.set_ylabel('Normalized intensity (a.u.)', fontsize=15)
+                xyi2.set_title(
+                    'Autocorrelation function for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
+                    fontsize=15)
+                plt.xticks(fontsize=15)
+                plt.yticks(fontsize=15)
+                fig2.savefig(self.resultsfolder + self.filename[:-4] + names.AUTOCORREL + '-' + str(
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                plt.close()
+
+                # Crossing times and natural frequency
+                fig4 = plt.figure(figsize=(10, 8))
+                xyi4 = fig4.add_subplot(111)
+                zerocrossings = np.where(np.diff(np.signbit(normcorrelationfunc)))[0]
+                maxofcrossing = np.size((zerocrossings))
+                numberofcrossings = np.linspace(1, maxofcrossing, maxofcrossing)
+                xyi4.plot(time[1 + zerocrossings], numberofcrossings)
+                pvar = np.polyfit(time[1 + zerocrossings], numberofcrossings, deg=1)
+                dampedfreq = pvar[0] / 2
+                print('dampedfreq', dampedfreq)
+                xyi4.set_xlabel('Time (s)', fontsize=15)
+                xyi4.set_ylabel('Zero crossing', fontsize=15)
+                xyi4.set_title('Zero crossing for peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
+                               fontsize=15)
+                plt.xticks(fontsize=15)
+                plt.yticks(fontsize=15)
+                fig4.savefig(self.resultsfolder + self.filename[:-4] + names.ZEROCROSSING + '-' + str(
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                plt.close()
+                naturalfrequency = dampedfreq / np.sqrt(1 - np.square(dampingfactor))
+                decayfactor = dampingfactor * naturalfrequency
+                print('naturalfrequency', naturalfrequency)
+                #print('decayfactor', decayfactor)
+            else: #if there is less than 3 datapoints in the region
+                print('Not enough data points in the ROI for frequency ' + str(np.around(self.frequencyrange[peak],2)))
+                print('Setting damping factor to zero')
+                print('Check bell shape curve and the test curve for the correlation function')
+
+                figteste = plt.figure()
+                xy = figteste.add_subplot(111)
+                xy.scatter(correlationpeaks,normcorrelationfunc[correlationpeaks],marker='+')
+                xy.plot(normcorrelationfunc)
+                figteste.savefig(self.resultsfolder + 'test-curve-correlfunc-' + str(np.around(self.frequencyrange[
+                                                                                                   peak],
+                                                                                     2))+'.png')
+                plt.close()
+                naturalfrequency = self.frequencyrange[peak]
+                dampingfactor = np.nan
 
             # Enhanced shape form (weighted sum)
             weightedshape = np.zeros((self.numofchannelsnew, self.numofchannelsnew))
@@ -715,7 +765,7 @@ class OMA(object):
 
             # 3D Animation for mode shapes visualization: video works but with 2 sensors it doesnt make sense, must test for 3 sensors
             figrawmodeshape = plt.figure(figsize=(15, 8))
-            xyzrawmodeshape = figrawmodeshape.add_subplot(111, projection='3d')
+            xyzrawmodeshape = figrawmodeshape.add_subplot(111, projection="3d")
             line, = xyzrawmodeshape.plot([], [], zs=[])
             Writer = animation.writers['ffmpeg']
             writer = Writer(fps=25, metadata=dict(artist='Me'), bitrate=1800)
@@ -806,6 +856,7 @@ class OMA(object):
             self.efddmodalfreqs.append(naturalfrequency)
             self.enhancedmodalshape.append(newmodalshape)
 
+        print(self.efdddampingratio)
         np.savetxt(self.resultsfolder + self.filename[:-4] + names.EFDD_FREQ_DAMP + '-' + str(
             np.around(self.freal, 1)) + names.DECIMATION + '.txt',
                    [self.efddmodalfreqs, self.efdddampingratio])
@@ -866,7 +917,7 @@ class OMA(object):
             firstintegral = np.zeros(sizeofdata - 1)
             for step in range(sizeofdata - 1):
                 firstintegral[step] = (self.Calibrateddata[step + 1, sensors] + self.Calibrateddata[step, sensors]) / (
-                            self.samplingratio * 2)
+                        self.samplingratio * 2)
             secondintegral = np.zeros((sizeofdata - 2))
             for step in range(sizeofdata - 2):
                 secondintegral[step] = (firstintegral[step + 1] + firstintegral[step]) / (self.samplingratio * 2)
@@ -877,14 +928,14 @@ class OMA(object):
         for sensors1 in range(numofsensors):
             for sensors2 in range(numofsensors):
                 self.sensorshift[0, sensors1, sensors2] = (
-                            self.sensordisplacement[sensors1 * 3] - self.sensordisplacement[
-                        sensors2 * 3])  # /np.abs(self.coordinates[sensors2,0] - self.coordinates[sensors1,0])
+                        self.sensordisplacement[sensors1 * 3] - self.sensordisplacement[
+                    sensors2 * 3])  # /np.abs(self.coordinates[sensors2,0] - self.coordinates[sensors1,0])
                 self.sensorshift[1, sensors1, sensors2] = (
-                            self.sensordisplacement[sensors1 * 3 + 1] - self.sensordisplacement[
-                        sensors2 * 3 + 1])  # /np.abs(self.coordinates[sensors2,1] - self.coordinates[sensors1,1])
+                        self.sensordisplacement[sensors1 * 3 + 1] - self.sensordisplacement[
+                    sensors2 * 3 + 1])  # /np.abs(self.coordinates[sensors2,1] - self.coordinates[sensors1,1])
                 self.sensorshift[2, sensors1, sensors2] = (
-                            self.sensordisplacement[sensors1 * 3 + 2] - self.sensordisplacement[
-                        sensors2 * 3 + 2])  # /np.abs(self.coordinates[sensors2,2] - self.coordinates[sensors1,2])
+                        self.sensordisplacement[sensors1 * 3 + 2] - self.sensordisplacement[
+                    sensors2 * 3 + 2])  # /np.abs(self.coordinates[sensors2,2] - self.coordinates[sensors1,2])
                 self.sensorshift[0, sensors1, sensors2] = self.sensorshift[0, sensors1, sensors2] - self.sensorshift[
                     0, sensors1, sensors2, 0]
                 self.sensorshift[1, sensors1, sensors2] = self.sensorshift[1, sensors1, sensors2] - self.sensorshift[
@@ -923,7 +974,7 @@ class OMA(object):
 
 
 if __name__ == "__main__":
-    teste = OMA('structure_daq1.6.100_telescopeMST0__0_2019-08-25_05-33-33_960000.ascii_2019-08-25_15_files-merged.txt')
+    teste = OMA('/scratch/users/vimartin/data/2019-09-30_15_files-merged.txt')
     teste.rawdataplot18()
     teste.calibrate()
     frequencyrange, yaxis, left, right, DONTRUNFLAG = teste.FDD(desiredmaxfreq=10, numoflinestoplot=3)

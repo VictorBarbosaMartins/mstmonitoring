@@ -3,6 +3,8 @@ import os
 
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
+
+plt.switch_backend('agg')
 import numpy as np
 import scipy
 from scipy.stats import chisquare
@@ -45,8 +47,13 @@ class Weather(object):
         """
 
         self.timeofacquisition = kwargs.get('timeofacquisition', (0, 24))
-        self.weatherinfo = np.loadtxt(self.weatherdatafolder + self.weatherdatafile, delimiter='\t', skiprows=1,
-                                      dtype=float)
+        try:
+            self.weatherinfo = np.loadtxt(self.weatherdatafolder + self.weatherdatafile, delimiter='\t', skiprows=1,
+                                          dtype=float)
+        except:
+            print("It is not possible to open the weather file")
+            DONTRUNFLAG = 2
+            return DONTRUNFLAG
         self.sizeoffile = np.size(self.weatherinfo, axis=0)
         variablenames = ['time', 'outsidetemperature', 'insidetemperature', 'outsidehumidity', 'insidehumidity',
                          'pressure',
@@ -54,7 +61,8 @@ class Weather(object):
         self.dictofvariables = {}
         monthdict = {1: "Jan.", 2: "Feb.", 3: "Mar.", 4: "Apr.", 5: "May", 6: "Jun.", 7: "Jul.", 8: "Aug.", 9: "Sep.",
                      10: "Okt.", 11: "Nov.", 12: "Dez"}
-        self.month = monthdict[int(self.weatherdatafile[15:17])]
+        #self.month = monthdict[int(self.weatherdatafile[15:17])]
+        self.month = self.weatherdatafile[15:17]
         self.day = str(self.weatherdatafile[17:19])
         self.year = str(self.weatherdatafile[11:15])
 
@@ -204,7 +212,7 @@ class Weather(object):
             plt.close()
         return DONTRUNFLAG
 
-    def Statistics(self, DONTRUNFLAG: bool) -> tuple[float, float, float, float]:
+    def Statistics(self, DONTRUNFLAG):
         """Derive the statistical information about the data set. The quality check is created based on this
         statistics. Returns mean, variance, min and max values for all the variables
 
@@ -218,7 +226,7 @@ class Weather(object):
         if DONTRUNFLAG == 1:
             print("If you wish to run analysis, please delete results")
 
-        else:
+        elif DONTRUNFLAG == 0:
 
             # Statistics
             self.variables = [self.outsidetemperature, self.insidetemperature, self.outhumidity, self.inhumidity,
@@ -234,6 +242,11 @@ class Weather(object):
                 self.minvalues[variablenum] = describedstats.minmax[0]
                 self.maxvalues[variablenum] = describedstats.minmax[1]
                 print(describedstats)
+            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-meanvalues.txt',self.meanvalues)
+            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-variance.txt',self.variance)
+            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-minvalues.txt',self.minvalues)
+            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-maxvalues.txt',self.maxvalues)
+
             return self.meanvalues, self.variance, self.minvalues, self.maxvalues
 
     def Qualitycheck(self, DONTRUNFLAG: int, **kwargs) -> tuple:
@@ -254,13 +267,13 @@ class Weather(object):
 
         self.windmeanthreshold = kwargs.get('windthreshold', 1.1)
         self.winddirminvariance = kwargs.get('winddirminvariance', 180)
+        WindSpeedFlag, WindDirectionFlag = 0, 0
 
         if DONTRUNFLAG == 1:
             print("If you wish to run analysis, please delete results")
 
-        else:
+        elif DONTRUNFLAG == 0:
 
-            WindSpeedFlag, WindDirectionFlag = 0, 0
             if self.meanvalues[5] >= self.windmeanthreshold:
                 WindSpeedFlag = 1
             else:
@@ -279,7 +292,7 @@ class Weather(object):
                     self.timeofacquisition[1]) + 'h')
                 print('This dataset will be excluded from analysis!')
 
-            return WindSpeedFlag, WindDirectionFlag
+        return WindSpeedFlag, WindDirectionFlag
 
 
 if __name__ == "__main__":

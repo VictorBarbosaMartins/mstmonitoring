@@ -24,54 +24,71 @@ class RunOMA(object):
         self.numoflinestoplot = kwargs.get('numoflinestoplot', 3)
         # self.homefolder = os.path.normpath(os.getcwd() + os.sep + os.pardir) #home directory of the system
         self.homefolder = os.environ["MST-STR-MON-HOME"] + '/'
-        self.datafolder = os.environ["MST-STR-MON-DATA"] + '/'
-        self.searchstring = kwargs.get('searchstring', "structure*1.6.100*2019-08*" + '_15' + names.MERGING + '*')
+        self.datafolder = os.environ["MST-STR-MON-DATA-CONVERTED"] + '/'
+        self.searchstring = kwargs.get('searchstring', "2019-*" + names.MERGING + '*.txt')
 
         self.datafilenames = np.sort(glob(
             self.datafolder + self.searchstring))  # folder in which it is supposed to be stored the accelerometers data files
-        self.sizeofgoodfiles = np.size(self.datafilenames)
-        self.date = np.zeros((self.sizeofgoodfiles)).astype(str)
-        for eachdate in range(self.sizeofgoodfiles):
+        self.sizeofdatafiles = np.size(self.datafilenames)
+        self.date = np.zeros((self.sizeofdatafiles)).astype(str)
+        for eachdate in range(self.sizeofdatafiles):
             self.redate = (re.search(r'\d{4}-\d{2}-\d{2}', os.path.basename(self.datafilenames[eachdate])))
             # date = datetime.datetime.strptime(self.redate.group(), '%Y-%m-%d').date()
             self.date[eachdate] = str(self.redate.group())
-
+        print(self.date)
+        self.date = np.unique(self.date)
+        self.sizeofdatafiles = np.size(self.date)
         if type(
                 self.goodfiles) == str and self.goodfiles == 'all':  # Using all the files in the expected folder. if not, use the selected datasets
             print("Tracking all files")
         else:
             print("Tracking selected files")
-            self.numberofgooddatafiles = np.size(self.goodfiles)
-            self.gooddate = np.zeros((self.numberofgooddatafiles)).astype(str)
-            self.goodindexes = np.zeros((self.numberofgooddatafiles)).astype(int)
-            for eachdate in range(self.numberofgooddatafiles):
+            self.sizeofweatherfiles = np.size(self.goodfiles)
+            self.gooddate = np.zeros((self.sizeofweatherfiles)).astype(str)
+            # self.goodindexes = np.zeros((self.numberofgooddatafiles)).astype(int)
+            self.gooddataindexes, istherefilethatday, self.newweatherfilenames, self.newdate = [], [], [], []
+            for eachdate in range(self.sizeofweatherfiles):
                 self.redate = re.search(r'\d{4}\d{2}\d{2}', os.path.basename(self.goodfiles[eachdate]))
+
                 # date = datetime.datetime.strptime(self.redate.group(), '%Y-%m-%d').date()
                 self.gooddate[eachdate] = str(self.redate.group())[:4] + '-' + str(self.redate.group())[
                                                                                4:6] + '-' + str(self.redate.group())[
                                                                                             6:8]
-                print(self.date)
-                print(self.gooddate[eachdate])
-                self.goodindexes[eachdate] = np.where(self.date == self.gooddate[eachdate])[0]
+            for eachweatherdata in range(self.sizeofweatherfiles):
+                newindex = np.where(self.date == self.gooddate[eachweatherdata])[0]
 
-            self.datafilenames = self.datafilenames[self.goodindexes]
-            self.sizeofgoodfiles = self.numberofgooddatafiles
+                self.gooddataindexes.append(newindex)
+            self.gooddataindexes = np.array(self.gooddataindexes)
+
+            self.gooddataindexes = np.array(self.gooddataindexes[np.where(self.gooddataindexes >= 0)[0]]).flatten()
+
+            self.gooddataindexes = np.array(self.gooddataindexes, dtype=int)
+
+            self.datafilenames = self.datafilenames[self.gooddataindexes]
+            # self.datafilenames = self.datafilenames[self.goodindexes[np.where(istherefilethatday==True)[0]]]
+
+            self.sizeofdatafiles = np.size(self.datafilenames)
             self.date = self.gooddate
 
-        self.basename = os.path.basename(self.datafilenames[0])[:91]
+        self.basename = os.path.basename(self.datafilenames[0])
 
     def sample(self):
-        for datafilenum in range(self.sizeofgoodfiles):
+        for datafilenum in range(self.sizeofdatafiles):
             justfilename = os.path.basename(self.datafilenames[datafilenum])
             print('Running OMA for file:', justfilename)
             OMAinscene = omasingle.OMA(justfilename)
             DONTRUNFLAG = OMAinscene.rawdataplot18()
             if DONTRUNFLAG == True:
-                print("Oma analysis already ran for this file.")
+                print("Raw plot already generated for this file.")
+                print("If you want to run again, please delete results first.")
             else:
                 OMAinscene.calibrate()
                 OMAinscene.sensorshift()
                 OMAinscene.FDD()
+                # DONTRUNFLAGOMA =  OMAinscene.FDD()
+                # if DONTRUNFLAGOMA == True:
+                # print("Oma analysis already ran for this file.")
+                # else:
                 OMAinscene.peakpicking()
                 MACmatrix = OMAinscene.MACfunction()
                 OMAinscene.MACplot(MACmatrix)
@@ -84,13 +101,13 @@ class Track(object):
 
     # This class analyses the results of the OMA for a series of files, study trends, track modes and detect damage
     def __init__(self, **kwargs):
-        self.MAClimit = 0.95
+        self.MAClimit = 0.97
         self.goodfiles = kwargs.get("files", "all")
         self.homefolder = os.environ["MST-STR-MON-HOME"] + '/'  # home directory of the system
-        self.datafolder = os.environ["MST-STR-MON-DATA"] + '/'
+        self.datafolder = os.environ["MST-STR-MON-DATA-CONVERTED"] + '/'
         self.omaonefilefolder = os.environ["MST-STR-MON-ONEFILEOMA"] + '/'
         # searching specific files: names.MERGING: just merged datas; 100 hz in 2019, for sensors...
-        self.searchstring = kwargs.get('searchstring', "structure*1.6.100*2019-08*" + names.MERGING)
+        self.searchstring = kwargs.get('searchstring', "*2019*" + names.MERGING)
 
         self.EFDD_modalfreq_filenames = np.sort(glob(
             self.omaonefilefolder + self.searchstring + '*' + names.EFDD_FREQ_DAMP + '*.txt'))  # folder in which it is supposed to be stored the accelerometers data files
@@ -105,6 +122,7 @@ class Track(object):
             self.redate = (re.search(r'\d{4}-\d{2}-\d{2}', os.path.basename(self.EFDD_modalfreq_filenames[eachdate])))
             # date = datetime.datetime.strptime(self.redate.group(), '%Y-%m-%d').date()
             self.date[eachdate] = str(self.redate.group())
+            print(self.date[eachdate])
 
         if type(
                 self.goodfiles) == str and self.goodfiles == 'all':  # Using all the files in the expected folder. if not, use the selected datasets
@@ -113,19 +131,33 @@ class Track(object):
             self.numberofgooddatafiles = np.size(self.goodfiles)
             self.gooddate = np.zeros((self.numberofgooddatafiles)).astype(str)
             self.goodindexes = np.zeros((self.numberofgooddatafiles)).astype(int)
+
             for eachdate in range(self.numberofgooddatafiles):
                 self.redate = re.search(r'\d{4}\d{2}\d{2}', os.path.basename(self.goodfiles[eachdate]))
                 # date = datetime.datetime.strptime(self.redate.group(), '%Y-%m-%d').date()
                 self.gooddate[eachdate] = str(self.redate.group())[:4] + '-' + str(self.redate.group())[
                                                                                4:6] + '-' + str(self.redate.group())[
                                                                                             6:8]
-                self.goodindexes[eachdate] = np.where(self.date == self.gooddate[eachdate])[0]
 
-            self.EFDD_modalshape_filenames = self.EFDD_modalshape_filenames[self.goodindexes]
-            self.EFDD_modalfreq_filenames = self.EFDD_modalfreq_filenames[self.goodindexes]
-            self.shifts_filenames = self.shifts_filenames[self.goodindexes]
-            self.numberofdatafiles = self.numberofgooddatafiles
-            self.date = self.gooddate
+            self.gooddataindexes = []
+            for eachdate in range(self.numberofgooddatafiles):
+                newindex = np.where(self.date == self.gooddate[eachdate])[0]
+                self.gooddataindexes.append(newindex)
+
+                print(self.gooddate[eachdate])
+            self.gooddataindexes = np.array(self.gooddataindexes)
+
+            self.gooddataindexes = np.array(self.gooddataindexes[np.where(self.gooddataindexes >= 0)[0]]).flatten()
+
+            self.gooddataindexes = np.array(self.gooddataindexes, dtype=int)
+            # self.goodindexes[eachdate] = np.where(self.date == self.gooddate[eachdate])[0]
+
+            self.date = self.date[self.gooddataindexes]
+            print(self.date, 'date')
+            self.EFDD_modalshape_filenames = self.EFDD_modalshape_filenames[self.gooddataindexes]
+            self.EFDD_modalfreq_filenames = self.EFDD_modalfreq_filenames[self.gooddataindexes]
+            self.shifts_filenames = self.shifts_filenames[self.gooddataindexes]
+            self.numberofdatafiles = np.size(self.EFDD_modalshape_filenames)
 
         self.basename = os.path.basename(self.EFDD_modalfreq_filenames[0])[:91]
         # for eachdate in range(self.numberofdatafiles):
@@ -164,8 +196,8 @@ class Track(object):
         self.numofmodesperfile = np.zeros(self.numberofdatafiles, dtype=int)
         colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'black', 'gray', 'brown']
 
+        print(self.numberofdatafiles)
         for filenum in range(self.numberofdatafiles):
-
             # Read and store information about modal frequencies and mode shapes
             newfilefreq = np.loadtxt(self.EFDD_modalfreq_filenames[filenum])
             self.numofmodesperfile[filenum] = np.size(newfilefreq, axis=1)
@@ -188,11 +220,11 @@ class Track(object):
 
             xymodalfreq.scatter(np.ones(self.numofmodesperfile[filenum]) * filenum, newfilefreq[0], color='red')
             xymodalfreq.set_ylabel('Frequency(Hz)', fontsize=15)
-            xymodalfreq.set_title('Modal Frequencies along the days', fontsize=15)
+            xymodalfreq.set_title('Modal Frequencies throughout the days', fontsize=15)
 
             xydamping.scatter(np.ones(self.numofmodesperfile[filenum]) * filenum, 100 * newfilefreq[1], color='red')
             xydamping.set_ylabel('Damping (%)', fontsize=15)
-            xydamping.set_title('Damping along the days', fontsize=15)
+            xydamping.set_title('Damping throughout the days', fontsize=15)
 
         self.locs = np.arange(0, self.numberofdatafiles, 1)
 
@@ -229,10 +261,10 @@ class Track(object):
                 for peak2 in range(self.numofmodesperfile[filenum + 1]):
                     self.MAC[filenum, peak1, peak2] = np.square(
                         np.dot(self.EFDD_modalshape[filenum][peak1], self.EFDD_modalshape[filenum + 1][peak2])) / (
-                                                                  np.dot(self.EFDD_modalshape[filenum][peak1],
-                                                                         self.EFDD_modalshape[filenum][peak1]) * np.dot(
-                                                              self.EFDD_modalshape[filenum + 1][peak2],
-                                                              self.EFDD_modalshape[filenum + 1][peak2]))
+                                                              np.dot(self.EFDD_modalshape[filenum][peak1],
+                                                                     self.EFDD_modalshape[filenum][peak1]) * np.dot(
+                                                          self.EFDD_modalshape[filenum + 1][peak2],
+                                                          self.EFDD_modalshape[filenum + 1][peak2]))
                     # print(filenum,peak1,peak2,self.MAC[filenum, peak1, peak2])
 
         # Find which modal frequencies from subsequent days are correlated with one another
@@ -251,6 +283,19 @@ class Track(object):
         self.changefactorfrequency, self.changefactordamping = [np.zeros((self.numberofdatafiles - 1)) for i in
                                                                 range(2)]
 
+        # Plot number of correlation per file: it may also indicate when there is a huge change and therefore no correlation (must have wind selection turned on)
+        figcorrelation = plt.figure(figsize=(15, 8))
+        xycorrelation = figcorrelation.add_subplot(111)
+        xycorrelation.plot(self.locs[:-1], self.correlperday)
+        xycorrelation.set_title('Number of correlation between consecutive days', fontsize=15)
+        xycorrelation.set_xticks(ticks=self.locs[:-1])
+        xycorrelation.set_xticklabels(labels=self.date, rotation=90)
+        xycorrelation.set_ylabel('Number of correlations', fontsize=15)
+        figcorrelation.savefig(self.resultsfolder + self.basename + self.date[0] + 'until' + self.date[
+            -1] + names.NUM_CORRELATION + '.png')
+        plt.close()
+
+        # if self.numofcorrelations != 0: #If there is any correlation
         for correlationum in range(self.numofcorrelations):
             self.whichfile = (self.correlatedfrequencies[0][correlationum]).astype(int)
             whichfileback = (self.correlatedfrequencies[0][correlationum - 1]).astype(int)
@@ -261,16 +306,16 @@ class Track(object):
             # Shifts in the modal parameters for the subsequent correlated days (%)
             # used abs here because some correlated modes are out of phase (180° although they refer to the same freq)
             self.modeshapeshift[correlationum] = 100 * (
-                        np.abs(self.EFDD_modalshape[self.whichfile + 1][self.freq2[correlationum]]) - np.abs(
-                    self.EFDD_modalshape[self.whichfile][self.freq1[correlationum]])) / \
+                    np.abs(self.EFDD_modalshape[self.whichfile + 1][self.freq2[correlationum]]) - np.abs(
+                self.EFDD_modalshape[self.whichfile][self.freq1[correlationum]])) / \
                                                  self.EFDD_modalshape[self.whichfile][self.freq1[correlationum]]
             self.freqshift[correlationum] = 100 * (
-                        self.EFDD_modalfreq[self.whichfile + 1][0][self.freq2[correlationum]] -
-                        self.EFDD_modalfreq[self.whichfile][0][self.freq1[correlationum]]) / \
+                    self.EFDD_modalfreq[self.whichfile + 1][0][self.freq2[correlationum]] -
+                    self.EFDD_modalfreq[self.whichfile][0][self.freq1[correlationum]]) / \
                                             self.EFDD_modalfreq[self.whichfile][0][self.freq1[correlationum]]
             self.dampingshift[correlationum] = 100 * (
-                        self.EFDD_modalfreq[self.whichfile + 1][1][self.freq2[correlationum]] -
-                        self.EFDD_modalfreq[self.whichfile][1][self.freq1[correlationum]]) / \
+                    self.EFDD_modalfreq[self.whichfile + 1][1][self.freq2[correlationum]] -
+                    self.EFDD_modalfreq[self.whichfile][1][self.freq1[correlationum]]) / \
                                                self.EFDD_modalfreq[self.whichfile][1][self.freq1[correlationum]]
 
             # Ploting each mode shape correlation for each subsequent date
@@ -306,25 +351,40 @@ class Track(object):
             # xymodeshape.add_line(linemodeshapes)
             # freqxdamping.add_line(XYlinefreqdamp)
 
-        # Plot number of correlation per file: it may also indicate when there is a huge change and therefore no correlation (must have wind selection turned on)
-        figcorrelation = plt.figure(figsize=(15, 8))
-        xycorrelation = figcorrelation.add_subplot(111)
-        xycorrelation.plot(self.locs[:-1], self.correlperday)
-        xycorrelation.set_title('Number of correlation between consecutive days', fontsize=15)
-        xycorrelation.set_xticks(ticks=self.locs[:-1])
-        xycorrelation.set_xticklabels(labels=self.date, rotation=90)
-        xycorrelation.set_ylabel('Number of correlations', fontsize=15)
-        figcorrelation.savefig(self.resultsfolder + self.basename + self.date[0] + 'until' + self.date[
-            -1] + names.NUM_CORRELATION + '.png')
-        plt.close()
+        # Change factor variables and chisquare
+        self.chisquarefreq, self.chisquaredamping, self.chisquaremodeshape = [np.zeros((self.numberofdatafiles - 1)) for
+                                                                              i in range(3)]
 
-        # Change factor variables
         for filenum in range(self.numberofdatafiles - 1):  # errado essa soma
-            firstindex = np.where(self.correlatedfrequencies[0] == filenum)[0][0]
-            self.changefactorfrequency[filenum] = np.sum(
-                self.freqshift[firstindex:firstindex + self.correlperday[filenum]]) / self.correlperday[filenum]
-            self.changefactordamping[filenum] = np.sum(
-                self.dampingshift[firstindex:firstindex + self.correlperday[filenum]]) / self.correlperday[filenum]
+            if self.correlperday[filenum] != 0:  # if there is no correlation that day
+                firstindex = np.where(self.correlatedfrequencies[0] == filenum)[0][0]
+                self.changefactorfrequency[filenum] = np.sum(
+                    self.freqshift[firstindex:firstindex + self.correlperday[filenum]]) / self.correlperday[filenum]
+                self.changefactordamping[filenum] = np.sum(
+                    self.dampingshift[firstindex:firstindex + self.correlperday[filenum]]) / self.correlperday[filenum]
+                squarefreq, squaredamp, squaremodeshape = [], [], []
+                firstindex = np.where(self.correlatedfrequencies[0] == filenum)[0][0]
+                for mode in range(self.correlperday[filenum]):
+                    squarefreq.append(np.square(self.freqshift[firstindex + mode] / 100) * np.abs(
+                        self.EFDD_modalfreq[filenum][0][self.freq1[firstindex + mode]]))
+                    squaredamp.append(np.square(self.dampingshift[firstindex + mode] / 100) * np.abs(
+                        self.EFDD_modalfreq[filenum][1][self.freq1[firstindex + mode]]))
+                    squaremodeshape.append(np.square(self.modeshapeshift[firstindex + mode] / 100) * np.abs(
+                        self.EFDD_modalshape[filenum][self.freq1[firstindex + mode]]))
+
+                self.chisquarefreq[filenum] = np.sum(squarefreq) / self.correlperday[filenum]
+                self.chisquaredamping[filenum] = np.sum(squaredamp) / self.correlperday[filenum]
+                self.chisquaremodeshape[filenum] = np.sum(squaremodeshape) / (
+                        self.correlperday[filenum] * self.numofchannelsindatafile)
+
+            else:  # if there is no correlation
+                self.changefactorfrequency[filenum] = None
+                self.changefactordamping[filenum] = None
+                self.freqshift[filenum] = None
+                self.dampingshift[filenum] = None
+                self.chisquarefreq[filenum] = None
+                self.chisquaredamping[filenum] = None
+                self.chisquaremodeshape[filenum] = None
 
         # Monitoring relative changes in the frequency
         figchangefactorfrequency = plt.figure(figsize=(15, 8))
@@ -380,45 +440,28 @@ class Track(object):
         # Mode shape visualization
 
         # Chi square indicator
-        self.chisquarefreq, self.chisquaredamping, self.chisquaremodeshape = [np.zeros((self.numberofdatafiles - 1)) for
-                                                                              i in range(3)]
-        for filenum in range(self.numberofdatafiles - 1):
-            squarefreq, squaredamp, squaremodeshape = [], [], []
-            firstindex = np.where(self.correlatedfrequencies[0] == filenum)[0][0]
-            for mode in range(self.correlperday[filenum]):
-                squarefreq.append(np.square(self.freqshift[firstindex + mode] / 100) * np.abs(
-                    self.EFDD_modalfreq[filenum][0][self.freq1[firstindex + mode]]))
-                squaredamp.append(np.square(self.dampingshift[firstindex + mode] / 100) * np.abs(
-                    self.EFDD_modalfreq[filenum][1][self.freq1[firstindex + mode]]))
-                squaremodeshape.append(np.square(self.modeshapeshift[firstindex + mode] / 100) * np.abs(
-                    self.EFDD_modalshape[filenum][self.freq1[firstindex + mode]]))
-
-            self.chisquarefreq[filenum] = np.sum(squarefreq) / self.correlperday[filenum]
-            self.chisquaredamping[filenum] = np.sum(squaredamp) / self.correlperday[filenum]
-            self.chisquaremodeshape[filenum] = np.sum(squaremodeshape) / (
-                        self.correlperday[filenum] * self.numofchannelsindatafile)
 
         figchifreq = plt.figure(figsize=(15, 8))
         xychifreq = figchifreq.add_subplot(111)
         xychifreq.plot(self.locs[:-1], self.chisquarefreq)
-        xychifreq.set_ylabel(r'$\chi ^2$', fontsize=15)
-        xychifreq.set_title(r'$\chi ^2$ for modal frequencies', fontsize=15)
+        xychifreq.set_ylabel('Frequency change indicator (Hz²)', fontsize=15)
+        xychifreq.set_title('Square frequency change', fontsize=15)
         xychifreq.set_xticks(ticks=self.locs[:-1])
         xychifreq.set_xticklabels(labels=self.date, rotation=90)
 
         figchidamp = plt.figure(figsize=(15, 8))
         xychidamp = figchidamp.add_subplot(111)
         xychidamp.plot(self.locs[:-1], self.chisquaredamping)
-        xychidamp.set_ylabel(r'$\chi ^2$', fontsize=15)
-        xychidamp.set_title(r'$\chi ^2$ for damping ratio', fontsize=15)
+        xychidamp.set_ylabel('Damping change indicator', fontsize=15)
+        xychidamp.set_title('Squared damping change', fontsize=15)
         xychidamp.set_xticks(ticks=self.locs[:-1])
         xychidamp.set_xticklabels(labels=self.date, rotation=90)
 
         figchimodeshape = plt.figure(figsize=(15, 8))
         xychimodeshape = figchimodeshape.add_subplot(111)
         xychimodeshape.plot(self.locs[:-1], self.chisquaremodeshape)
-        xychimodeshape.set_ylabel(r'$\chi ^2$', fontsize=15)
-        xychimodeshape.set_title(r'$\chi ^2$ for mode shape', fontsize=15)
+        xychimodeshape.set_ylabel('Mode shape change indicator', fontsize=15)
+        xychimodeshape.set_title('Squared mode shape change', fontsize=15)
         xychimodeshape.set_xticks(ticks=self.locs[:-1])
         xychimodeshape.set_xticklabels(labels=self.date, rotation=90)
 

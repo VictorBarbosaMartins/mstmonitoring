@@ -22,6 +22,7 @@ class Reports(object):
     def __init__(self):
         self.reportsfolder = os.environ["MST-STR-MON-REPORTS"] + '/'
         self.resultsfolder = os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] + '/'
+        self.weatherresultsfolder = os.environ["MST-STR-MON-WEATHERRESULTS"] + '/'
         self.day = datetime.today().date()
 
         try:
@@ -41,19 +42,20 @@ class Reports(object):
             DONTRUNFLAG = 0
             # YELLOW LIGHT
             self.LIMITCHIFREQ1 = kwargs.get('yellowfreq', 0.001)
-            self.LIMITCHIMODE1 = kwargs.get('yellowmode', 0.5)
-            self.LIMITCHIDAMP1 = kwargs.get('yellowdamp', 0.005)
+            self.LIMITCHIMODE1 = kwargs.get('yellowmode', 0.05)
+            self.LIMITCHIDAMP1 = kwargs.get('yellowdamp', 0.002)
 
             # RED LIGHT
-            self.LIMITCHIFREQ2 = kwargs.get('redfreq', 0.01)
-            self.LIMITCHIMODE2 = kwargs.get('redmode', 1)
-            self.LIMITCHIDAMP2 = kwargs.get('reddamp', 0.1)
+            self.LIMITCHIFREQ2 = kwargs.get('redfreq', 0.005)
+            self.LIMITCHIMODE2 = kwargs.get('redmode', 0.1)
+            self.LIMITCHIDAMP2 = kwargs.get('reddamp', 0.01)
 
             # Reading files
             dates = np.loadtxt(self.resultsfolder + "dates.txt", dtype=str, delimiter='\t')
             freqdampshift = np.loadtxt(self.resultsfolder + "freq-damping-shift.txt")
             numofcorrel = np.loadtxt(self.resultsfolder + "numofcorrelation.txt")
             chisquare = np.loadtxt(self.resultsfolder + "chisquare.txt")
+
 
             # Building data frame
             df2 = pd.DataFrame()
@@ -81,9 +83,9 @@ class Reports(object):
             pdf.cell(50, 10, "From " + str(dates[0]) + " to " + str(dates[-1]) + ":", 0, 2, 'C')
 
             pdf.cell(30, 10, 'Date', 1, 0, 'C')
-            pdf.cell(50, 10, 'Freq. chisquare', 1, 0, 'C')
-            pdf.cell(50, 10, 'Shape chisquare', 1, 0, 'C')
-            pdf.cell(50, 10, 'Damp. chisquare', 1, 0, 'C')
+            pdf.cell(50, 10, 'Freq. indicator', 1, 0, 'C')
+            pdf.cell(50, 10, 'Shape indicator', 1, 0, 'C')
+            pdf.cell(50, 10, 'Damp. indicator', 1, 0, 'C')
             pdf.cell(90, 10, " ", 0, 2, 'C')
             pdf.cell(-180)
             pdf.set_font('arial', '', 12)
@@ -101,6 +103,9 @@ class Reports(object):
                 elif df2['Freq-chisquare'].iloc[i] > self.LIMITCHIFREQ2:
                     pdf.set_fill_color(255, 0, 0)
                     Redflag[0] = 1
+                elif str(df2['Freq-chisquare'].iloc[i]) == 'nan':
+                    pdf.set_fill_color(255, 0, 0)
+                    Redflag[0] = 1
                 else:
                     pdf.set_fill_color(0, 255, 0)
                 pdf.cell(50, 10, '%s' % (str(df2['Freq-chisquare'].iloc[i])), 1, 0, 'C', fill=True)
@@ -112,6 +117,9 @@ class Reports(object):
                 elif df2['Shape-chisquare'].iloc[i] > self.LIMITCHIMODE2:
                     Redflag[1] = 1
                     pdf.set_fill_color(255, 0, 0)
+                elif str(df2['Shape-chisquare'].iloc[i]) == 'nan':
+                    pdf.set_fill_color(255, 0, 0)
+                    Redflag[0] = 1
                 else:
                     pdf.set_fill_color(0, 255, 0)
 
@@ -124,6 +132,9 @@ class Reports(object):
                 elif df2['Damp-chisquare'].iloc[i] > self.LIMITCHIDAMP2:
                     pdf.set_fill_color(255, 0, 0)
                     Redflag[2] = 1
+                elif str(df2['Damp-chisquare'].iloc[i]) == 'nan':
+                    pdf.set_fill_color(255, 0, 0)
+                    Redflag[0] = 1
                 else:
                     pdf.set_fill_color(0, 255, 0)
                 pdf.cell(50, 10, '%s' % (str(df2['Damp-chisquare'].iloc[i])), 1, 2, 'C', fill=True)
@@ -131,18 +142,18 @@ class Reports(object):
                 reportaction[0].append(df2['Date'].iloc[i])
                 if 1 in Yellowflag:
                     reportaction[1].append(
-                        'Yellow signal: There might be a moderate change in the structure. Check first if the graphs make sense, i.e. check if there isnt any outlier in the tracking curve!')
+                        'Yellow signal: There might be a moderate change in the structure. Check first if this is an outlier in the tracking curve (False alert)!')
 
                 if 1 in Redflag:
                     reportaction[1].append(
-                        'Red signal: There might be a big change in the structure. Check first if the graphs make sense, i.e. check if there isnt any outlier in the tracking curve!')
+                        'Red signal: There might be a big change in the structure. Check first if this is an outlier in the tracking curve (False alert)!')
 
                 Yellowflag = [0, 0, 0]
                 Redflag = [0, 0, 0]
             pdf.cell(90, 10, " ", 0, 2, 'C')
             pdf.cell(-20)
             pdf.set_font('arial', 'B', 12)
-            pdf.cell(50, 10, "Graphs:", 0, 2, 'C')
+            pdf.cell(50, 10, "Results:", 0, 2, 'C')
             pdf.cell(90, 5, " ", 0, 2, 'C')
 
             # Pasting graphs
@@ -155,7 +166,6 @@ class Reports(object):
             glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.CHISQUARE_MODE_SHAPE + '*png')[
                 0]
             pdf.image(modegraphstring, x=15, y=None, w=180, h=120, type='', link='')
-
             pdf.cell(90, 10, " ", 0, 2, 'C')
             dampgraphstring = \
             glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.CHISQUARE_DAMPING + '*png')[0]
@@ -166,9 +176,9 @@ class Reports(object):
             glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.TRACK_FREQ + '*png')[0]
             pdf.image(dampgraphstring, x=15, y=None, w=180, h=120, type='', link='')
 
-            """pdf.cell(90, 10, " ", 0, 2, 'C')
-            dampgraphstring = glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.EFDD_MODE_SHAPE + '*png')[0]
-            pdf.image(dampgraphstring, x=15, y=None, w=180, h=120, type='', link='')"""
+            #pdf.cell(90, 10, " ", 0, 2, 'C')
+            #dampgraphstring = glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.EFDD_MODE_SHAPE + '*png')[0]
+            #pdf.image(dampgraphstring, x=15, y=None, w=180, h=120, type='', link='')
 
             pdf.cell(90, 10, " ", 0, 2, 'C')
             dampgraphstring = \
@@ -176,23 +186,46 @@ class Reports(object):
             pdf.image(dampgraphstring, x=15, y=None, w=180, h=120, type='', link='')
 
             pdf.cell(90, 10, " ", 0, 2, 'C')
+            numofcorrelstring = \
+            glob(self.resultsfolder + '*' + dates[0] + 'until' + dates[-1] + '*' + names.NUM_CORRELATION + '*png')[0]
+            pdf.image(numofcorrelstring, x=15, y=None, w=180, h=120, type='', link='')
+
+            pdf.set_font('arial', 'B', 12)
+            pdf.cell(50, 10, "Weather:", 0, 2, 'C')
+            pdf.cell(90, 5, " ", 0, 2, 'C')
+
+            pdf.cell(90, 10, " ", 0, 2, 'C')
+            winddays = \
+            glob(self.weatherresultsfolder +  '*' + str(self.day)[0:4] + str(self.day)[5:7] + str(self.day)[8:10] + names.WIND_DAYS + '.png')[0]
+            pdf.image(winddays, x=15, y=None, w=180, h=120, type='', link='')
+
+            pdf.cell(90, 10, " ", 0, 2, 'C')
+            tempdays = \
+            glob(self.weatherresultsfolder + '*' + str(self.day)[0:4] + str(self.day)[5:7] + str(self.day)[8:10]  + names.TEMP_DAYS + '.png')[0]
+            pdf.image(tempdays, x=15, y=None, w=180, h=120, type='', link='')
+
+
+            """
+            pdf.cell(90, 10, " ", 0, 2, 'C')
             pdf.set_font('arial', 'B', 12)
             pdf.cell(50, 10, "Message:", 0, 2, 'C')
             pdf.set_font('arial', '', 12)
+
 
             # Printing message
             print(reportaction)
             if np.size(reportaction[1]) != 0:
                 for message in range(0, np.size(reportaction[1])):
                     pdf.cell(20)
-                    pdf.set_text_color(255, 0, 0)
-                    pdf.cell(50, 10, 'There is a warning on ' + str(reportaction[1][message])[2:-2] + '!', 0, 2, 'C')
-                    # pdf.cell(90, 5, " ", 0, 2, 'C')
+                    pdf.cell(90, 10, " ", 0, 2, 'C')
+                    #pdf.set_text_color(255, 0, 0)
+                    pdf.cell(50, 10, 'There is a warning on ' + str(reportaction[0][message])[2:-2] + '!', 0, 2, 'C')
+                    pdf.cell(90, 5, " ", 0, 2, 'C')
                     pdf.set_text_color(0, 0, 0)
                     pdf.cell(40)
-                    pdf.cell(50, 10, str(reportaction[1][message])[2:86], 0, 2, 'C')
-                    pdf.cell(23, 10, str(reportaction[1][message])[86:-2], 0, 2, 'C')
-                    pdf.cell(90, 5, " ", 0, 2, 'C')
+                    #pdf.cell(50, 10, str(reportaction[1][message]), 0, 2, 'C')
+                    #pdf.cell(23, 10, str(reportaction[1][message]), 0, 2, 'C')
+                    #pdf.cell(90, 5, " ", 0, 2, 'C')
 
             else:
                 pdf.cell(20)
@@ -200,7 +233,8 @@ class Reports(object):
                 pdf.cell(50, 10, 'No big change was detected in the structure')
                 # pdf.cell(90, 5, " ", 0, 2, 'C')
                 pdf.set_text_color(0, 0, 0)
-                pdf.cell(40)
+                pdf.cell(40)"""
+
             pdf.output(OUTREPORT, 'F')
 
         return DONTRUNFLAG
