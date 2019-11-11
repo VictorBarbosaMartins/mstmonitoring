@@ -52,8 +52,9 @@ class Weather(object):
                                           dtype=float)
         except:
             print("It is not possible to open the weather file")
-            DONTRUNFLAG = 2
-            return DONTRUNFLAG
+            #DONTRUNFLAG = 2
+            #return DONTRUNFLAG
+            return 0
         self.sizeoffile = np.size(self.weatherinfo, axis=0)
         variablenames = ['time', 'outsidetemperature', 'insidetemperature', 'outsidehumidity', 'insidehumidity',
                          'pressure',
@@ -85,134 +86,134 @@ class Weather(object):
         self.insidetemperature = self.dictofvariables['insidetemperature'][self.condition]
         self.insidetemperature = self.insidetemperature[nonzerointemp]
         OUTTEMP = self.resultsfolder + self.year + self.month + self.day + names.TEMPERATURE + '.png'
-        if os.path.isfile(OUTTEMP):
-            DONTRUNFLAG = 1
-            print("File " + OUTTEMP + " already exists.")
-            print("If you wish to run analysis, please delete results")
+        #if os.path.isfile(OUTTEMP):
+        #DONTRUNFLAG = 1
+        #print("File " + OUTTEMP + " already exists.")
+        #print("If you wish to run analysis, please delete results")
 
-        else:
-            DONTRUNFLAG = 0
+        #else:
+            #DONTRUNFLAG = 0
 
-            # Temperature
-            figtemperature = plt.figure(figsize=(8, 6))
-            xytemperature = figtemperature.add_subplot(111)
+        # Temperature
+        figtemperature = plt.figure(figsize=(8, 6))
+        xytemperature = figtemperature.add_subplot(111)
 
-            xytemperature.plot(self.time[nonzeroouttemp], self.outsidetemperature,
-                               label='outside temperature', linewidth=0.5)
-            xytemperature.plot(self.time[nonzerointemp], self.insidetemperature,
-                               label='inside temperature', linewidth=0.5)
-            xytemperature.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
-            xytemperature.set_xlabel('Time (h)', fontsize=15)
-            xytemperature.set_ylabel('Temperature (°C)', fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
+        xytemperature.plot(self.time[nonzeroouttemp], self.outsidetemperature,
+                           label='outside temperature', linewidth=0.5)
+        xytemperature.plot(self.time[nonzerointemp], self.insidetemperature,
+                           label='inside temperature', linewidth=0.5)
+        xytemperature.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
+        xytemperature.set_xlabel('Time (h)', fontsize=15)
+        xytemperature.set_ylabel('Temperature (°C)', fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
 
-            xytemperature.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
-            plt.legend(fontsize=15)
-            figtemperature.savefig(OUTTEMP)
-            plt.close()
+        xytemperature.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
+        plt.legend(fontsize=15)
+        figtemperature.savefig(OUTTEMP)
+        plt.close()
 
-            # Humidity
-            fighumidity = plt.figure(figsize=(8, 6))
-            xyhumidity = fighumidity.add_subplot(111)
-            self.outhumidity = self.dictofvariables['outsidehumidity'][self.condition]
-            self.inhumidity = self.dictofvariables['insidehumidity'][self.condition]
-            nonzeroouthum = self.outhumidity != 0
-            nonzeroinhum = self.inhumidity != 0
-            self.outhumidity = self.outhumidity[nonzeroouthum]
-            self.inhumidity = self.inhumidity[nonzeroinhum]
+        # Humidity
+        fighumidity = plt.figure(figsize=(8, 6))
+        xyhumidity = fighumidity.add_subplot(111)
+        self.outhumidity = self.dictofvariables['outsidehumidity'][self.condition]
+        self.inhumidity = self.dictofvariables['insidehumidity'][self.condition]
+        nonzeroouthum = self.outhumidity != 0
+        nonzeroinhum = self.inhumidity != 0
+        self.outhumidity = self.outhumidity[nonzeroouthum]
+        self.inhumidity = self.inhumidity[nonzeroinhum]
 
-            xyhumidity.plot(self.time[nonzeroouthum], self.outhumidity, label='outside humidity')
-            xyhumidity.plot(self.time[nonzeroinhum], self.inhumidity, label='inside humidity')
-            xyhumidity.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
-            xyhumidity.set_xlabel('Time (h)', fontsize=20)
-            xyhumidity.set_ylabel('Relative humidity (%)', fontsize=20)
-            xyhumidity.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
-            plt.legend(fontsize=15)
-            fighumidity.savefig(self.resultsfolder + self.year + self.month + self.day + names.HUMIDITY + '.png')
-            plt.close()
+        xyhumidity.plot(self.time[nonzeroouthum], self.outhumidity, label='outside humidity')
+        xyhumidity.plot(self.time[nonzeroinhum], self.inhumidity, label='inside humidity')
+        xyhumidity.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
+        xyhumidity.set_xlabel('Time (h)', fontsize=20)
+        xyhumidity.set_ylabel('Relative humidity (%)', fontsize=20)
+        xyhumidity.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
+        plt.legend(fontsize=15)
+        fighumidity.savefig(self.resultsfolder + self.year + self.month + self.day + names.HUMIDITY + '.png')
+        plt.close()
 
-            # Pressure
-            figpressure = plt.figure(figsize=(8, 6))
-            xypressure = figpressure.add_subplot(111)
-            self.pressure = self.dictofvariables['pressure'][self.condition]
-            nonzeropressure = self.pressure != 0
-            xypressure.scatter(self.time[nonzeropressure], self.pressure[nonzeropressure], label='Pressure',
-                               linewidth=1)
-            xypressure.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
-            xypressure.set_xlabel('Time (h)', fontsize=15)
-            xypressure.set_ylabel('Pressure (mm Hg)', fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            xypressure.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
-            plt.legend(fontsize=15)
-            figpressure.savefig(self.resultsfolder + self.year + self.month + self.day + names.PRESSURE + '.png')
-            plt.close()
+        # Pressure
+        figpressure = plt.figure(figsize=(8, 6))
+        xypressure = figpressure.add_subplot(111)
+        self.pressure = self.dictofvariables['pressure'][self.condition]
+        nonzeropressure = self.pressure != 0
+        xypressure.scatter(self.time[nonzeropressure], self.pressure[nonzeropressure], label='Pressure',
+                           linewidth=1)
+        xypressure.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
+        xypressure.set_xlabel('Time (h)', fontsize=15)
+        xypressure.set_ylabel('Pressure (mm Hg)', fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        xypressure.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
+        plt.legend(fontsize=15)
+        figpressure.savefig(self.resultsfolder + self.year + self.month + self.day + names.PRESSURE + '.png')
+        plt.close()
 
-            # Wind
-            figwind = plt.figure(figsize=(8, 8))
-            xywind = figwind.add_subplot(111)
-            self.windspeed = self.dictofvariables['windspeed'][self.condition]
-            maxspeed = np.amax(self.windspeed)
-            self.winddirection = self.dictofvariables['winddirection'][self.condition]
+        # Wind
+        figwind = plt.figure(figsize=(8, 8))
+        xywind = figwind.add_subplot(111)
+        self.windspeed = self.dictofvariables['windspeed'][self.condition]
+        maxspeed = np.amax(self.windspeed)
+        self.winddirection = self.dictofvariables['winddirection'][self.condition]
 
-            for step in range(np.size(self.winddirection)):
-                # Defining direction of the wind
-                '''if (self.winddirection[step]>0) & (self.winddirection[step]<90):
-                    xdirec = np.cos(np.pi / 360 * self.winddirection[step])
-                    ydirec = np.sin(np.pi / 360 * self.winddirection[step])
-                elif (self.winddirection[step]) > 90 & (self.winddirection[step] < 180):
-                    xdirec = np.cos(np.pi / 360 * self.winddirection[step])
-                    ydirec = np.sin(np.pi / 360 * self.winddirection[step])
-                elif (self.winddirection[step] > 180) & (self.winddirection[step] < 270):
-                    xdirec = np.cos(np.pi / 360 * self.winddirection[step])
-                    ydirec = np.sin(np.pi / 360 * self.winddirection[step])
-                elif (self.winddirection[step] > 270) & (self.winddirection[step] < 360):'''
-                xdirec = np.cos(np.pi / 180 * self.winddirection[step])
-                ydirec = np.sin(np.pi / 180 * self.winddirection[step])
+        for step in range(np.size(self.winddirection)):
+            # Defining direction of the wind
+            '''if (self.winddirection[step]>0) & (self.winddirection[step]<90):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step]) > 90 & (self.winddirection[step] < 180):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step] > 180) & (self.winddirection[step] < 270):
+                xdirec = np.cos(np.pi / 360 * self.winddirection[step])
+                ydirec = np.sin(np.pi / 360 * self.winddirection[step])
+            elif (self.winddirection[step] > 270) & (self.winddirection[step] < 360):'''
+            xdirec = np.cos(np.pi / 180 * self.winddirection[step])
+            ydirec = np.sin(np.pi / 180 * self.winddirection[step])
 
-                # Drawing lines in the diagram
-                windarrowx = [0, self.windspeed[step] * xdirec]
-                windarrowy = [0, self.windspeed[step] * ydirec]
-                linewind = mlines.Line2D(windarrowx, windarrowy, c='red')
-                xywind.add_line(linewind)
-            circle = plt.Circle((0, 0), maxspeed, color='black', fill=False, linestyle='--')
-            plt.text(np.around(maxspeed, 1) - .45, 0, str(np.around(maxspeed, 1)))
-            onethirdcircle = plt.Circle((0, 0), 1 / 3 * maxspeed, color='black', fill=False, linestyle='--')
-            plt.text(np.around(1 / 3 * maxspeed, 1) - .45, 0, str(np.around(1 / 3 * maxspeed, 1)))
-            twothirdscircle = plt.Circle((0, 0), 2 / 3 * maxspeed, color='black', fill=False, linestyle='--')
-            plt.text(np.around(2 / 3 * maxspeed, 1) - .45, 0, str(np.around(2 / 3 * maxspeed, 1)))
-            xywind.add_artist(circle)
-            xywind.add_artist(onethirdcircle)
-            xywind.add_artist(twothirdscircle)
-            xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(
-                self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h', fontsize=15)
-            xywind.set_xlim(-maxspeed, maxspeed)
-            xywind.set_ylim(-maxspeed, maxspeed)
-            xywind.set_xlabel('Wind speed X-direction (m/s)', fontsize=15)
-            xywind.set_ylabel('Wind speed Y-direction (m/s)', fontsize=15)
-            figwind.savefig(self.resultsfolder + self.year + self.month + self.day + names.WIND + '.png')
-            plt.close()
+            # Drawing lines in the diagram
+            windarrowx = [0, self.windspeed[step] * xdirec]
+            windarrowy = [0, self.windspeed[step] * ydirec]
+            linewind = mlines.Line2D(windarrowx, windarrowy, c='red')
+            xywind.add_line(linewind)
+        circle = plt.Circle((0, 0), maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(maxspeed, 1) - .45, 0, str(np.around(maxspeed, 1)))
+        onethirdcircle = plt.Circle((0, 0), 1 / 3 * maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(1 / 3 * maxspeed, 1) - .45, 0, str(np.around(1 / 3 * maxspeed, 1)))
+        twothirdscircle = plt.Circle((0, 0), 2 / 3 * maxspeed, color='black', fill=False, linestyle='--')
+        plt.text(np.around(2 / 3 * maxspeed, 1) - .45, 0, str(np.around(2 / 3 * maxspeed, 1)))
+        xywind.add_artist(circle)
+        xywind.add_artist(onethirdcircle)
+        xywind.add_artist(twothirdscircle)
+        xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(
+            self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h', fontsize=15)
+        xywind.set_xlim(-maxspeed, maxspeed)
+        xywind.set_ylim(-maxspeed, maxspeed)
+        xywind.set_xlabel('Wind speed X-direction (m/s)', fontsize=15)
+        xywind.set_ylabel('Wind speed Y-direction (m/s)', fontsize=15)
+        figwind.savefig(self.resultsfolder + self.year + self.month + self.day + names.WIND + '.png')
+        plt.close()
 
-            # Rain rate
-            figrainrate = plt.figure(figsize=(8, 8))
-            xyrainrate = figrainrate.add_subplot(111)
-            self.rainrate = self.dictofvariables['rainrate'][self.condition]
-            nonzeropressure = self.pressure != 0
-            xyrainrate.scatter(self.time, self.rainrate, label='Rain rate', linewidth=1)
-            xyrainrate.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
-            xyrainrate.set_xlabel('Time (h)', fontsize=15)
-            xyrainrate.set_ylabel('Rain rate', fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            xyrainrate.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
-            plt.legend(fontsize=15)
-            figrainrate.savefig(self.resultsfolder + self.year + self.month + self.day + names.RAINRATE + '.png')
-            # plt.show()
-            plt.close()
-        return DONTRUNFLAG
+        # Rain rate
+        figrainrate = plt.figure(figsize=(8, 8))
+        xyrainrate = figrainrate.add_subplot(111)
+        self.rainrate = self.dictofvariables['rainrate'][self.condition]
+        nonzeropressure = self.pressure != 0
+        xyrainrate.scatter(self.time, self.rainrate, label='Rain rate', linewidth=1)
+        xyrainrate.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
+        xyrainrate.set_xlabel('Time (h)', fontsize=15)
+        xyrainrate.set_ylabel('Rain rate', fontsize=15)
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        xyrainrate.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
+        plt.legend(fontsize=15)
+        figrainrate.savefig(self.resultsfolder + self.year + self.month + self.day + names.RAINRATE + '.png')
+        # plt.show()
+        plt.close()
 
-    def Statistics(self, DONTRUNFLAG):
+
+    def Statistics(self):
         """Derive the statistical information about the data set. The quality check is created based on this
         statistics. Returns mean, variance, min and max values for all the variables
 
@@ -223,33 +224,33 @@ class Weather(object):
         :return minvalues: Min values for every weather variable,
         :return maxvalues: Max values for every weather variable,
         """
-        if DONTRUNFLAG == 1:
-            print("If you wish to run analysis, please delete results")
+        #if DONTRUNFLAG == 1:
+            #print("If you wish to run analysis, please delete results")
 
-        elif DONTRUNFLAG == 0:
+        #elif DONTRUNFLAG == 0:
 
-            # Statistics
-            self.variables = [self.outsidetemperature, self.insidetemperature, self.outhumidity, self.inhumidity,
+        # Statistics
+        self.variables = [self.outsidetemperature, self.insidetemperature, self.outhumidity, self.inhumidity,
                               self.pressure, self.windspeed, self.winddirection, self.rainrate]
-            self.numofvariables = np.size(self.variables, axis=0)
-            dicttreateddata = {v: self.variables[v] for v in range(self.numofvariables)}
-            self.meanvalues, self.variance, self.minvalues, self.maxvalues = [np.zeros(self.numofvariables) for i in
+        self.numofvariables = np.size(self.variables, axis=0)
+        dicttreateddata = {v: self.variables[v] for v in range(self.numofvariables)}
+        self.meanvalues, self.variance, self.minvalues, self.maxvalues = [np.zeros(self.numofvariables) for i in
                                                                               range(4)]
-            for variablenum in range(self.numofvariables):
-                describedstats = scipy.stats.describe(dicttreateddata[variablenum])
-                self.meanvalues[variablenum] = describedstats.mean
-                self.variance[variablenum] = describedstats.variance
-                self.minvalues[variablenum] = describedstats.minmax[0]
-                self.maxvalues[variablenum] = describedstats.minmax[1]
-                print(describedstats)
-            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-meanvalues.txt',self.meanvalues)
-            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-variance.txt',self.variance)
-            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-minvalues.txt',self.minvalues)
-            np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-maxvalues.txt',self.maxvalues)
+        for variablenum in range(self.numofvariables):
+            describedstats = scipy.stats.describe(dicttreateddata[variablenum])
+            self.meanvalues[variablenum] = describedstats.mean
+            self.variance[variablenum] = describedstats.variance
+            self.minvalues[variablenum] = describedstats.minmax[0]
+            self.maxvalues[variablenum] = describedstats.minmax[1]
+            print(describedstats)
+        np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-meanvalues.txt',self.meanvalues)
+        np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-variance.txt',self.variance)
+        np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-minvalues.txt',self.minvalues)
+        np.savetxt(self.resultsfolder + self.year + self.month + self.day + '-maxvalues.txt',self.maxvalues)
 
-            return self.meanvalues, self.variance, self.minvalues, self.maxvalues
+        return self.meanvalues, self.variance, self.minvalues, self.maxvalues
 
-    def Qualitycheck(self, DONTRUNFLAG: int, **kwargs) -> tuple:
+    def Qualitycheck(self, **kwargs):
         """
         Compares the results from the statistics of a dataset to the pre-defined thresholds and returns the Flags
         for wind speed and wind direction respectively. If a Flag is 1, the dataset is good for further analysis
@@ -266,32 +267,35 @@ class Weather(object):
         """
 
         self.windmeanthreshold = kwargs.get('windthreshold', 1.1)
-        self.winddirminvariance = kwargs.get('winddirminvariance', 180)
+        self.windmeanmax = kwargs.get('windmeanmax', 2.5)
+        self.winddirminvariance = kwargs.get('winddirminvariance', 120)
         WindSpeedFlag, WindDirectionFlag = 0, 0
 
-        if DONTRUNFLAG == 1:
-            print("If you wish to run analysis, please delete results")
+        #if DONTRUNFLAG == 1:
+            #print("If you wish to run analysis, please delete results")
 
-        elif DONTRUNFLAG == 0:
+        #elif DONTRUNFLAG == 0:
 
-            if self.meanvalues[5] >= self.windmeanthreshold:
-                WindSpeedFlag = 1
-            else:
-                WindSpeedFlag = 0
-                print('Wind is not strong enough for data taking on ' + str(self.month) + ', ' + str(
+        if (self.meanvalues[5] >= self.windmeanthreshold) and (self.meanvalues[5] <= self.windmeanmax):
+            WindSpeedFlag = 1
+        else:
+            WindSpeedFlag = 0
+            print('Wind is not strong enough for data taking on ' + str(self.month) + ', ' + str(
                     self.day) + ', ' + str(self.year) + ' from ' + str(self.timeofacquisition[0]) + 'h to ' + str(
                     self.timeofacquisition[1]) + 'h')
-                print('This dataset will be excluded from analysis!')
+            print('This dataset will be excluded from analysis!')
 
-            if self.variance[6] >= self.winddirminvariance:
-                WindDirectionFlag = 1
-            else:
-                WindDirectionFlag = 0
-                print('Wind direction did not vary much for data taking on ' + str(self.month) + ', ' + str(
+        #if self.variance[6] >= self.winddirminvariance:
+        if self.variance[6] >= 0:
+            WindDirectionFlag = 1
+        else:
+            WindDirectionFlag = 0
+            print('Wind direction did not vary much for data taking on ' + str(self.month) + ', ' + str(
                     self.day) + ', ' + str(self.year) + ' from ' + str(self.timeofacquisition[0]) + 'h to ' + str(
                     self.timeofacquisition[1]) + 'h')
-                print('This dataset will be excluded from analysis!')
-
+            print('This dataset will be excluded from analysis!')
+        print("Wind average speed is: ",self.meanvalues[5])
+        print("Wind variance is: ",self.variance[6])
         return WindSpeedFlag, WindDirectionFlag
 
 

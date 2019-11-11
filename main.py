@@ -60,14 +60,15 @@ Manipulatingdata.mergefilesall(rangeoffiles=[0,15], dates=['2019-08-16',todayiss
 
 Weatheranalysis=weathermultiple.Weather()
 Selectedfiles = Weatheranalysis.Selectionfiles(dates=['2019-08-16',todayisstring])
-Flags = Weatheranalysis.Analysis(files=Selectedfiles,timeofacquisition=(6,7))
+Flags = Weatheranalysis.Analysis(files=Selectedfiles,timeofacquisition=(6,7)) #uncomment if using selection criteria
+Goodfiles = Weatheranalysis.Selectioncriteria()
 Weatheranalysis.Windeveryday()
 Weatheranalysis.Tempeveryday()
-Goodfiles = Weatheranalysis.Selectioncriteria()
 
-Runningoma = omamultiple.RunOMA(files=Selectedfiles)
+Runningoma = omamultiple.RunOMA(files=Goodfiles)
 Runningoma.sample()
-Tracking = omamultiple.Track(files=Selectedfiles)
+#Tracking = omamultiple.Track(files=Selectedfiles)
+Tracking = omamultiple.Track(files=Goodfiles)
 Tracking.Trendanalysis(numofchannels=9)
 Summary = reports.Reports()
 Summary.generate()
