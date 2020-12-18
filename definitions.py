@@ -2,10 +2,10 @@ import os
 
 def define_paths():
     # SETTING UP ENVIRONMENT VARIABLES
-    os.environ["MST-STR-MON-HOME"] = '/home/victor/Desktop/teste'
-    os.environ["MST-STR-MON-DATA"] = os.environ["MST-STR-MON-HOME"] + '/data'
-    os.environ["MST-STR-MON-WEATHERDATA"] = os.environ["MST-STR-MON-DATA"] + '/weather'
-    os.environ["MST-STR-MON-RESULTS"] = os.environ["MST-STR-MON-HOME"] + '/output'
+    os.environ["MST-STR-MON-HOME"] = '/lustre/fs23/group/cta/users/vimartin/dish-backup'
+    os.environ["MST-STR-MON-DATA"] = os.environ["MST-STR-MON-HOME"] + '/rawdata'
+    os.environ["MST-STR-MON-WEATHERDATA"] = os.environ["MST-STR-MON-HOME"] + '/weather-data'
+    os.environ["MST-STR-MON-RESULTS"] = '/lustre/fs23/group/cta/users/vimartin/dish-backup/victor-scratch/output'
     os.environ["MST-STR-MON-ONEFILERESULTS"] = os.environ["MST-STR-MON-RESULTS"] + '/onefileanalysis'
     os.environ["MST-STR-MON-RAWDATAPLOTS"] = os.environ["MST-STR-MON-ONEFILERESULTS"] + '/rawdata'
     os.environ["MST-STR-MON-ONEFILEOMA"] = os.environ["MST-STR-MON-ONEFILERESULTS"] + '/analysisresults'
@@ -13,7 +13,8 @@ def define_paths():
     os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] = os.environ["MST-STR-MON-RESULTS"] + '/multiplefileanalysis'
     os.environ["MST-STR-MON-MULTIPLEFILESWEATHERRESULTS"] = os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] + '/weather'
     os.environ["MST-STR-MON-REPORTS"] = os.environ["MST-STR-MON-RESULTS"] + '/reports'
-    os.environ["MST-STR-MON-DATA-CONVERTED"] = os.environ["MST-STR-MON-DATA"]
+    os.environ["MST-STR-MON-DATA-CONVERTED"] = '/lustre/fs23/group/cta/users/vimartin/dish-backup/victor-scratch/data'
+    os.environ["MST-STR-EMAIL-LIST-FOLDER"] = '/afs/ifh.de/group/hess/scratch/user/vimartin/CTA/mstmonitoring'
 
 # SETTING UP NAMES OF FILES
 MERGING = '_files-merged'
@@ -73,6 +74,7 @@ def definepaths():
     os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] = os.environ["MST-STR-MON-RESULTS"] + '/multiplefileanalysis'
     os.environ["MST-STR-MON-MULTIPLEFILESWEATHERRESULTS"] = os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] + '/weather'
     os.environ["MST-STR-MON-REPORTS"] = os.environ["MST-STR-MON-RESULTS"] + '/reports'
+"""
 
 # SETTING UP NAMES OF FILES
 MERGING = '_files-merged'
@@ -113,4 +115,4 @@ FREQXDAMP = '_freqxdamp'
 REPORTS = 'Reports-'
 EMAILS_LIST = 'emails-list'
 WIND_DAYS = 'wind-days'
-TEMP_DAYS = 'temp-days''"""
+TEMP_DAYS = 'temp-days'

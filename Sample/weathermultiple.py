@@ -16,7 +16,7 @@ class Weather(object):
     def __init__(self, **kwargs):
         self.weatherdatafolder = os.environ[
                                      "MST-STR-MON-WEATHERDATA"] + '/'  # folder in which it is supposed to be stored the weather data files
-        self.searchstring = kwargs.get("files", 'weather*2019')
+        self.searchstring = kwargs.get("files", 'weather*')
         self.weatherdatafiles = kwargs.get("files", np.sort(glob(self.weatherdatafolder + self.searchstring + "*.txt")))
         self.numberofdatafiles = np.size(self.weatherdatafiles)
         self.date = [os.path.basename(self.weatherdatafiles[eachdate])[11:-4] for eachdate in

@@ -513,6 +513,6 @@ class Manipulatedata(object):
 
 if __name__ == "__main__":
     A = Manipulatedata()
-    A.convertallascii(searchstring='*1.6.100*2019-*')
+    A.convertallascii(searchstring='*1.6.100*')
     today = str(datetime.today())[:10]
-    A.mergefilesall(rangeoffiles=[0, 15], dates=['2019-08-16', today])
+    A.mergefilesall(rangeoffiles=[0, 15], dates=['2019-08-16', '2020-02-01'])

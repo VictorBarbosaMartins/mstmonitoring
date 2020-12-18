@@ -269,6 +269,7 @@ class Weather(object):
         self.windmeanthreshold = kwargs.get('windthreshold', 1.1)
         self.windmeanmax = kwargs.get('windmeanmax', 2.5)
         self.winddirminvariance = kwargs.get('winddirminvariance', 120)
+
         WindSpeedFlag, WindDirectionFlag = 0, 0
 
         #if DONTRUNFLAG == 1:

@@ -182,13 +182,13 @@ class Track(object):
 
         # Creating plots
         # Tracking modal freq
-        figmodalfreq = plt.figure(figsize=(15, 8))
+        figmodalfreq = plt.figure(figsize=(12,14))
         xymodalfreq = figmodalfreq.add_subplot(111)
         # Tracking damping ratio
-        figdamping = plt.figure(figsize=(15, 8))
+        figdamping = plt.figure(figsize=(12,14))
         xydamping = figdamping.add_subplot(111)
         # Correlation between frequency and damping
-        figfreqxdamping = plt.figure(figsize=(15, 8))
+        figfreqxdamping = plt.figure(figsize=(12,14))
         freqxdamping = figfreqxdamping.add_subplot(111)
         # Mode shape plot
 
@@ -214,17 +214,22 @@ class Track(object):
                 self.EFDD_modalshape = [newfilemode]
 
             freqxdamping.scatter(newfilefreq[0], 100 * newfilefreq[1])
-            freqxdamping.set_xlabel('Frequency (Hz)', fontsize=15)
-            freqxdamping.set_ylabel('Damping(%)', fontsize=15)
-            freqxdamping.set_title('Frequency x Damping', fontsize=15)
+            freqxdamping.set_xlabel('Frequency (Hz)', fontsize=25)
+            freqxdamping.set_ylabel('Damping(%)', fontsize=25)
+            freqxdamping.set_title('Frequency x Damping', fontsize=25)
 
             xymodalfreq.scatter(np.ones(self.numofmodesperfile[filenum]) * filenum, newfilefreq[0], color='red')
-            xymodalfreq.set_ylabel('Frequency(Hz)', fontsize=15)
-            xymodalfreq.set_title('Modal Frequencies throughout the days', fontsize=15)
+            xymodalfreq.set_ylabel('Frequency(Hz)', fontsize=25)
+            xymodalfreq.set_title('Modal Frequencies throughout the days', fontsize=25)
 
             xydamping.scatter(np.ones(self.numofmodesperfile[filenum]) * filenum, 100 * newfilefreq[1], color='red')
-            xydamping.set_ylabel('Damping (%)', fontsize=15)
-            xydamping.set_title('Damping throughout the days', fontsize=15)
+            xydamping.set_ylabel('Damping (%)', fontsize=25)
+            xydamping.set_title('Damping throughout the days', fontsize=25)
+
+            xydamping.tick_params(axis='both', which='major', labelsize=15)
+            xydamping.tick_params(axis='both', which='minor', labelsize=15)
+            xymodalfreq.tick_params(axis='both', which='major', labelsize=15)
+            xymodalfreq.tick_params(axis='both', which='minor', labelsize=15)
 
         self.locs = np.arange(0, self.numberofdatafiles, 1)
 
@@ -284,10 +289,10 @@ class Track(object):
                                                                 range(2)]
 
         # Plot number of correlation per file: it may also indicate when there is a huge change and therefore no correlation (must have wind selection turned on)
-        figcorrelation = plt.figure(figsize=(15, 8))
+        figcorrelation = plt.figure(figsize=(12,14))
         xycorrelation = figcorrelation.add_subplot(111)
         xycorrelation.plot(self.locs[:-1], self.correlperday)
-        xycorrelation.set_title('Number of correlation between consecutive days', fontsize=15)
+        xycorrelation.set_title('Number of correlation between consecutive days', fontsize=25)
         xycorrelation.set_xticks(ticks=self.locs[:-1])
         xycorrelation.set_xticklabels(labels=self.date, rotation=90)
         xycorrelation.set_ylabel('Number of correlations', fontsize=15)
@@ -319,7 +324,7 @@ class Track(object):
                                                self.EFDD_modalfreq[self.whichfile][1][self.freq1[correlationum]]
 
             # Ploting each mode shape correlation for each subsequent date
-            figshape = plt.figure(figsize=(15, 8))
+            figshape = plt.figure(figsize=(12,14))
             axshape = figshape.add_subplot(111)
             axshape.plot(np.arange(self.numofchannelsindatafile),
                          self.EFDD_modalshape[self.whichfile][self.freq1[correlationum]])
@@ -327,8 +332,8 @@ class Track(object):
                          self.EFDD_modalshape[self.whichfile + 1][self.freq2[correlationum]])
             axshape.set_title(
                 'Correlation between subsequent mode shapes on ' + str(self.date[self.whichfile]) + '-' + self.date[
-                    self.whichfile + 1], fontsize=15)
-            axshape.set_ylabel('Intensity (a.u.)', fontsize=15)
+                    self.whichfile + 1], fontsize=25)
+            axshape.set_ylabel('Intensity (a.u.)', fontsize=25)
             figshape.savefig(self.resultsfolder + self.basename + self.date[self.whichfile] + '-shape-correl-' + str(
                 np.around(self.EFDD_modalfreq[self.whichfile + 1][0][self.freq2[correlationum]], 2)) + 'Hz-' + str(
                 np.around(self.EFDD_modalfreq[self.whichfile][0][self.freq1[correlationum]], 2)) + 'Hz-' + '.png')
@@ -364,7 +369,7 @@ class Track(object):
                     self.dampingshift[firstindex:firstindex + self.correlperday[filenum]]) / self.correlperday[filenum]
                 squarefreq, squaredamp, squaremodeshape = [], [], []
                 firstindex = np.where(self.correlatedfrequencies[0] == filenum)[0][0]
-                for mode in range(self.correlperday[filenum]):
+                for mode in range(self.correlperday[filenum]): #2 to avoid the first 2 modes which are rotations
                     squarefreq.append(np.square(self.freqshift[firstindex + mode] / 100) * np.abs(
                         self.EFDD_modalfreq[filenum][0][self.freq1[firstindex + mode]]))
                     squaredamp.append(np.square(self.dampingshift[firstindex + mode] / 100) * np.abs(
@@ -387,26 +392,26 @@ class Track(object):
                 self.chisquaremodeshape[filenum] = None
 
         # Monitoring relative changes in the frequency
-        figchangefactorfrequency = plt.figure(figsize=(15, 8))
+        figchangefactorfrequency = plt.figure(figsize=(12,14))
         xychangefactorfrequency = figchangefactorfrequency.add_subplot(111)
         # Monitor relative changes in the damping ratio
-        figchangefactordamping = plt.figure(figsize=(15, 8))
+        figchangefactordamping = plt.figure(figsize=(12,14))
         xychangefactordamping = figchangefactordamping.add_subplot(111)
         # Monitor relative changes in the mode shapes
-        figchangemodeshape = plt.figure(figsize=(15, 8))
+        figchangemodeshape = plt.figure(figsize=(12,14))
         xychangemodeshape = figchangemodeshape.add_subplot(111)
 
         xychangefactorfrequency.plot(self.locs[:-1],
                                      self.changefactorfrequency)  # locs[:-1] = range(self.numofdatafiles - 1)
-        xychangefactorfrequency.set_ylabel('Frequency deviation (%)', fontsize=15)
-        xychangefactorfrequency.set_title('Frequency Shift for correlated modes', fontsize=15)
+        xychangefactorfrequency.set_ylabel('Frequency deviation (%)', fontsize=25)
+        xychangefactorfrequency.set_title('Frequency Shift for correlated modes', fontsize=25)
         xychangefactorfrequency.set_xticks(ticks=self.locs[:-1])
         xychangefactorfrequency.set_xticklabels(labels=self.date, rotation=90)
 
         xychangefactordamping.plot(range(self.numberofdatafiles - 1), self.changefactordamping)
-        xychangefactordamping.set_ylabel('Damping deviation (%)', fontsize=15)
+        xychangefactordamping.set_ylabel('Damping deviation (%)', fontsize=25)
         # xychangefactordamping.set_xlabel('Correlation', fontsize=15)
-        xychangefactordamping.set_title('Change factor in Damping for correlated modes', fontsize=15)
+        xychangefactordamping.set_title('Change factor in Damping for correlated modes', fontsize=25)
         xychangefactordamping.set_xticks(ticks=self.locs[:-1])
         xychangefactordamping.set_xticklabels(labels=self.date, rotation=90)
 
@@ -441,29 +446,36 @@ class Track(object):
 
         # Chi square indicator
 
-        figchifreq = plt.figure(figsize=(15, 8))
+        figchifreq = plt.figure(figsize=(12,14))
         xychifreq = figchifreq.add_subplot(111)
         xychifreq.plot(self.locs[:-1], self.chisquarefreq)
-        xychifreq.set_ylabel('Frequency change indicator (Hz²)', fontsize=15)
-        xychifreq.set_title('Square frequency change', fontsize=15)
+        xychifreq.set_ylabel('Frequency change indicator (Hz²)', fontsize=25)
+        xychifreq.set_title('Square frequency change', fontsize=25)
         xychifreq.set_xticks(ticks=self.locs[:-1])
         xychifreq.set_xticklabels(labels=self.date, rotation=90)
 
-        figchidamp = plt.figure(figsize=(15, 8))
+        figchidamp = plt.figure(figsize=(12, 14))
         xychidamp = figchidamp.add_subplot(111)
         xychidamp.plot(self.locs[:-1], self.chisquaredamping)
-        xychidamp.set_ylabel('Damping change indicator', fontsize=15)
-        xychidamp.set_title('Squared damping change', fontsize=15)
+        xychidamp.set_ylabel('Damping change indicator', fontsize=25)
+        xychidamp.set_title('Squared damping change', fontsize=25)
         xychidamp.set_xticks(ticks=self.locs[:-1])
         xychidamp.set_xticklabels(labels=self.date, rotation=90)
 
-        figchimodeshape = plt.figure(figsize=(15, 8))
+        figchimodeshape = plt.figure(figsize=(12, 14))
         xychimodeshape = figchimodeshape.add_subplot(111)
         xychimodeshape.plot(self.locs[:-1], self.chisquaremodeshape)
-        xychimodeshape.set_ylabel('Mode shape change indicator', fontsize=15)
-        xychimodeshape.set_title('Squared mode shape change', fontsize=15)
+        xychimodeshape.set_ylabel('Mode shape change indicator', fontsize=25)
+        xychimodeshape.set_title('Squared mode shape change', fontsize=25)
         xychimodeshape.set_xticks(ticks=self.locs[:-1])
         xychimodeshape.set_xticklabels(labels=self.date, rotation=90)
+
+        xychimodeshape.tick_params(axis='both', which='major', labelsize=15)
+        xychimodeshape.tick_params(axis='both', which='minor', labelsize=15)
+        xychidamp.tick_params(axis='both', which='major', labelsize=15)
+        xychidamp.tick_params(axis='both', which='minor', labelsize=15)
+        xychifreq.tick_params(axis='both', which='major', labelsize=15)
+        xychifreq.tick_params(axis='both', which='minor', labelsize=15)
 
         if type(self.goodfiles) == str and self.goodfiles == 'all':
             figchifreq.savefig(self.resultsfolder + self.basename + self.date[0] + 'until' + self.date[
@@ -483,7 +495,7 @@ class Track(object):
         plt.close()
 
         # Shifts between sensors (all values)
-        figshift1, figshift2, figshift3 = [plt.figure(figsize=(15, 8)) for i in range(3)]
+        figshift1, figshift2, figshift3 = [plt.figure(figsize=(12, 14)) for i in range(3)]
         xyshift1, xyshift2, xyshift3 = figshift1.add_subplot(111), figshift2.add_subplot(111), figshift3.add_subplot(
             111)
         plotdic = {0: xyshift1, 1: xyshift2, 2: xyshift3}
@@ -506,10 +518,12 @@ class Track(object):
                 for dimension in range(3):
                     plotdic[relation].plot(time[1:], np.power(10, 6) * newtext[dimension, 1:], color=color[dimension],
                                            label=labels[dimension])
-                plotdic[relation].set_title('Shift between: ' + titles[relation], fontsize=15)
+                plotdic[relation].set_title('Shift between: ' + titles[relation], fontsize=25)
                 plotdic[relation].set_xticklabels(labels=self.date, rotation=90)
                 plotdic[relation].set_xticks(ticks=self.locs * sizeofeachfile[filenum] / self.samplingratio)
-                plotdic[relation].set_ylabel(r'Shift ($\mu$m)', fontsize=15)
+                plotdic[relation].set_ylabel(r'Shift ($\mu$m)', fontsize=25)
+                plotdic[relation].tick_params(axis='both', which='major', labelsize=15)
+                plotdic[relation].tick_params(axis='both', which='minor', labelsize=15)
         for correlation in range(self.nummaxofcorrel):
             plotdic[correlation].grid()
             plotdic[correlation].legend(labels)

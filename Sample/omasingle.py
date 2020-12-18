@@ -1,6 +1,8 @@
 import errno
 import os
+import sys
 
+sys.path.append('/afs/ifh.de/group/hess/scratch/user/vimartin/CTA/mstmonitoring/')
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -22,6 +24,7 @@ class OMA(object):
     Default Sampling ratio is 100 Hz;'''
 
     def __init__(self, filename):
+        names.define_paths()
         self.filename = filename
         # self.path = os.path.normpath(os.getcwd() + os.sep + os.pardir)
         self.path = os.environ["MST-STR-MON-DATA-CONVERTED"] + '/'
@@ -204,6 +207,7 @@ class OMA(object):
         self.resolution = kwargs.get('resolution', 2048 * 2)
         self.datapoints = kwargs.get('datapoints', self.N)
         self.numoflinestoplot = kwargs.get('numoflinestoplot', 3)
+        self.overwrite = kwargs.get('overwrite', False)
         # self.sensors = kwargs.get('sensors', np.arange(0, self.numofchannels))
         numberoffreqlines = np.round(self.resolution / 2).astype(int) + 1
         percentagetooverlap = 0.66
@@ -225,7 +229,10 @@ class OMA(object):
 
         self.DONTRUNFLAG = 0
 
-        if os.path.isfile(self.OUTFDDFIG):
+        check = os.path.isfile(self.OUTFDDFIG)
+        if self.overwrite == True:
+            check = False
+        if check:
             self.DONTRUNFLAG = 1
             print("File " + self.OUTFDDFIG + " already exists.")
             print("If you wish to run analysis, please delete results")
@@ -272,15 +279,18 @@ class OMA(object):
                 xyi.plot(self.frequencyrange, self.singvaluesindecb[:, sensor], linewidth=1)
                 # xyi.plot(frequencyrange,Victorsingularvalues[:,sensor],linewidth=1)
                 # xyi.set_yscale('log')
-            plt.xlabel('Frequency (Hz)', fontsize=15)
+            legend = xyi.legend(labels=['1st SV','2nd SV','3rd SV'], title="Singular Value (SV)",
+                                loc=0, fancybox=True, fontsize=15)
+            legend.get_title().set_fontsize('15')
+            plt.xlabel('Frequency (Hz)', fontsize=25)
             # plt.ylabel('Intensity('+r'$(m/s^2)²/Hz)$'+')',fontsize=15)
-            plt.ylabel('Intensity(dB)', fontsize=20)
-            plt.xticks(np.arange(min(self.frequencyrange), max(self.frequencyrange) + 1, 1), fontsize=15)
-            plt.yticks(fontsize=15)
+            plt.ylabel('Intensity(dB)', fontsize=25)
+            plt.xticks(np.arange(min(self.frequencyrange), max(self.frequencyrange) + 1, 1), fontsize=25)
+            plt.yticks(fontsize=25)
             plt.grid()
             plt.xlim(0, self.desiredmaxfreq)
             plt.ylim(-120, -30)
-            plt.title('OMA spectrum', fontsize=15)
+            plt.title('OMA spectrum', fontsize=25)
             fig.savefig(self.OUTFDDFIG)
             np.savetxt(self.resultsfolder + self.filename[:-4] + names.FDD + str(self.sensors) + '-' + str(
                 np.around(self.freal, 1)) + 'Hzdec-singvalues.txt',
@@ -354,15 +364,15 @@ class OMA(object):
         xyi.scatter(self.frequencyrange[self.peaksstorage[0]],
                     self.singvaluesindecb[self.peaksstorage[0], 0], marker='+', color='red',
                     label='Potential modal frequencies')
-        plt.xlabel('Frequency (Hz)', fontsize=15)
+        plt.xlabel('Frequency (Hz)', fontsize=25)
         plt.ylim(-120, -30)
         # plt.ylabel('Intensity('+r'$(m^2/s)/Hz)$'+')', fontsize=15)
-        plt.ylabel('Intensity(dB)', fontsize=15)
-        plt.yticks(fontsize=15)
-        plt.xticks(np.arange(min(self.frequencyrange), max(self.frequencyrange) + 1, 1), fontsize=15)
+        plt.ylabel('Intensity(dB)', fontsize=25)
+        plt.yticks(fontsize=25)
+        plt.xticks(np.arange(min(self.frequencyrange), max(self.frequencyrange) + 1, 1), fontsize=25)
         plt.grid()
-        plt.title('OMA with frequency peaks', fontsize=15)
-        plt.legend(fontsize=15, loc=3)
+        plt.title('OMA with frequency peaks', fontsize=25)
+        plt.legend(fontsize=15, loc=1)
         f9.savefig(self.resultsfolder + self.filename[:-4] + names.FDD + str(self.sensors) + names.PEAKS + '-' + str(
             np.around(self.freal, 1)) + names.DECIMATION + '.png')
         # plt.close(f9)
@@ -974,10 +984,20 @@ class OMA(object):
 
 
 if __name__ == "__main__":
-    teste = OMA('/scratch/users/vimartin/data/2019-09-30_15_files-merged.txt')
+    import argparse
+    parser = argparse.ArgumentParser(description='Process OMA analysis.')
+
+    parser.add_argument('--input', dest='fileinput',
+                        help='Input file')
+
+    args = parser.parse_args()
+
+    #teste = OMA('2019-08-28_15_files-merged.txt')
+    teste = OMA(args.fileinput)
     teste.rawdataplot18()
     teste.calibrate()
-    frequencyrange, yaxis, left, right, DONTRUNFLAG = teste.FDD(desiredmaxfreq=10, numoflinestoplot=3)
+    frequencyrange, yaxis, left, right, DONTRUNFLAG = teste.FDD(desiredmaxfreq=10, numoflinestoplot=3,overwrite=True)
+    DONTRUNFLAG == False
     if DONTRUNFLAG == True:
         print("OMA Analysis already ran for this file")
     else:

@@ -48,28 +48,29 @@ import definitions
 
 
 #ALL TOGETHER
-definitions.definepaths()
-todayis = datetime.now()
-todayisstring = str(todayis)[:10]
-onemonthbefore = str(todayis - timedelta(days=30))[:10]
-print('Today is', todayis)
-Manipulatingdata = convertfile.Manipulatedata()
-Manipulatingdata.convertallascii(searchstring='*1.6.100*2019*')
+definitions.define_paths()
+#todayis = datetime.now()
+#todayisstring = str(todayis)[:10]
+#onemonthbefore = str(todayis - timedelta(days=30))[:10]
+#print('Today is', todayis)
+
+#Manipulatingdata = convertfile.Manipulatedata()
+#Manipulatingdata.convertallascii(searchstring='*1.6.100*')
 # The first 15 datasets must be the ones taken for the health monitoring system
-Manipulatingdata.mergefilesall(rangeoffiles=[0,15], dates=['2019-08-16',todayisstring])
+#Manipulatingdata.mergefilesall(rangeoffiles=[0,15], dates=['2019-08-16','2020-02-01'])
 
 Weatheranalysis=weathermultiple.Weather()
-Selectedfiles = Weatheranalysis.Selectionfiles(dates=['2019-08-16',todayisstring])
+Selectedfiles = Weatheranalysis.Selectionfiles(dates=['2019-08-16','2020-02-01'])
 Flags = Weatheranalysis.Analysis(files=Selectedfiles,timeofacquisition=(6,7)) #uncomment if using selection criteria
 Goodfiles = Weatheranalysis.Selectioncriteria()
 Weatheranalysis.Windeveryday()
 Weatheranalysis.Tempeveryday()
 
-Runningoma = omamultiple.RunOMA(files=Goodfiles)
-Runningoma.sample()
+#Runningoma = omamultiple.RunOMA(files=Goodfiles)
+#Runningoma.sample()
 #Tracking = omamultiple.Track(files=Selectedfiles)
 Tracking = omamultiple.Track(files=Goodfiles)
 Tracking.Trendanalysis(numofchannels=9)
-Summary = reports.Reports()
-Summary.generate()
-Summary.sendemail()
+#Summary = reports.Reports()
+#Summary.generate()
+#Summary.sendemail()

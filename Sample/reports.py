@@ -23,7 +23,8 @@ class Reports(object):
         self.reportsfolder = os.environ["MST-STR-MON-REPORTS"] + '/'
         self.resultsfolder = os.environ["MST-STR-MON-MULTIPLEFILESRESULTS"] + '/'
         self.weatherresultsfolder = os.environ["MST-STR-MON-WEATHERRESULTS"] + '/'
-        self.day = datetime.today().date()
+        #self.day = datetime.today().date()
+        self.day = '2020-02-01'
 
         try:
             os.makedirs(self.reportsfolder)
@@ -246,7 +247,7 @@ class Reports(object):
         filename = kwargs.get('filename', self.reportsfolder + names.REPORTS + str(self.day) + '.pdf')
         # libraries to be imported
         fromaddr = "mst.monitoring.structure@gmail.com"
-        toaddr = np.loadtxt(os.environ["MST-STR-MON-HOME"] + '/' + names.EMAILS_LIST + '.txt', dtype=str, delimiter=';')
+        toaddr = np.loadtxt(os.environ["MST-STR-EMAIL-LIST-FOLDER"] + '/' + names.EMAILS_LIST + '.txt', dtype=str, delimiter=';')
 
         # instance of MIMEMultipart
         msg = MIMEMultipart()
