@@ -11,7 +11,7 @@ import definitions as names
 
 
 class Weather(object):
-    # This class analyses the weather data to give a quality check for the accelerometers data sets
+    '''This class analyses the weather data to give a quality check for the accelerometers data sets'''
 
     def __init__(self, **kwargs):
         self.weatherdatafolder = os.environ[
@@ -31,6 +31,7 @@ class Weather(object):
                 raise
 
     def Selectionfiles(self, dates, **kwargs):
+        '''Select the weather files based on the period'''
         self.period = kwargs.get('period', 'daily')
         self.initialdate = datetime(int(dates[0][:4]), int(dates[0][5:7]), int(dates[0][8:10]))
         self.finaldate = datetime(int(dates[1][:4]), int(dates[1][5:7]), int(dates[1][8:10]))
@@ -63,6 +64,7 @@ class Weather(object):
         return self.selecteddatafiles
 
     def Analysis(self, **kwargs):
+        '''Analysis of the weather data for the selected period'''
         self.timeofacquisition = kwargs.get('timeofacquisition', (0, 24))
         self.windmeanthreshold = kwargs.get('windmeanthreshold', 1)
         self.windmeanmax = kwargs.get('windmeanmax', 2.5)
@@ -102,6 +104,7 @@ class Weather(object):
         return self.Flags
 
     def Selectioncriteria(self):
+        '''Applies the selection criteria to the analysed weather data'''
         self.goodfileindexes = np.where((self.Flags[:, 0] == 1) & (self.Flags[:, 1] == 1))
         self.goodfileindexes = self.goodfileindexes[0]
         # if quality criteria was applied
@@ -112,6 +115,7 @@ class Weather(object):
         return self.goodfiles
 
     def Windeveryday(self):
+        '''Plots the wind for every day'''
         windmean_filenames = np.array(
             [self.resultsfolder + self.newdate[i] + '-meanvalues.txt' for i in range(self.sizeofnewdate)])
         # print('windmean_filenames',windmean_filenames)
@@ -138,6 +142,7 @@ class Weather(object):
         plt.close()
 
     def Tempeveryday(self):
+        '''Plots the temperature for every day'''
         tempmean_filenames = np.array(
             [self.resultsfolder + self.newdate[i] + '-meanvalues.txt' for i in range(self.sizeofnewdate)])
         # print('windmean_filenames',windmean_filenames)

@@ -73,6 +73,7 @@ class RunOMA(object):
         self.basename = os.path.basename(self.datafilenames[0])
 
     def sample(self):
+        '''It runs the pipeline: run OMA for every day if it was not yet ran'''
         for datafilenum in range(self.sizeofdatafiles):
             justfilename = os.path.basename(self.datafilenames[datafilenum])
             print('Running OMA for file:', justfilename)
@@ -99,7 +100,7 @@ class RunOMA(object):
 
 class Track(object):
 
-    # This class analyses the results of the OMA for a series of files, study trends, track modes and detect damage
+    '''This class analyses the results of the OMA for a series of files, study trends, track modes and detect damage'''
     def __init__(self, **kwargs):
         self.MAClimit = 0.97
         self.goodfiles = kwargs.get("files", "all")
@@ -172,6 +173,7 @@ class Track(object):
                 raise
 
     def Trendanalysis(self, **kwargs):
+        '''Plots as function of time the results of the OMA analysis'''
         # Depending on the number of sensors available
         self.numofchannelsindatafile = kwargs.get("numofchannels", 9)
         self.samplingratio = kwargs.get('sampling', 100)

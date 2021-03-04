@@ -16,7 +16,7 @@ import definitions as names
 
 
 class Reports(object):
-    # This class sends reports and alerts based on the time series analysis
+    '''This class sends reports and alerts based on the time series analysis'''
 
     # Setting directories
     def __init__(self):
@@ -33,7 +33,7 @@ class Reports(object):
                 raise
 
     def generate(self, **kwargs):
-
+    '''Generate the report wirth results from Tracking'''
         OUTREPORT = self.reportsfolder + names.REPORTS + str(self.day) + '.pdf'
         if os.path.isfile(OUTREPORT):
             DONTRUNFLAG = 1
@@ -241,6 +241,7 @@ class Reports(object):
         return DONTRUNFLAG
 
     def sendemail(self, **kwargs):
+        '''Send the mail with the report, using a dedicated Gmail account'''
         # adapted from https://www.geeksforgeeks.org/send-mail-attachment-gmail-account-using-python/
         # Python code to illustrate Sending mail with attachments
         # from your Gmail account

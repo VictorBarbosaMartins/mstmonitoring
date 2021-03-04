@@ -1,7 +1,7 @@
 import errno
 import os
 import sys
-
+import argparse
 sys.path.append('/afs/ifh.de/group/hess/scratch/user/vimartin/CTA/mstmonitoring/')
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -86,6 +86,7 @@ class OMA(object):
             time = np.linspace(0, self.N * self.dt, self.N)
             f0 = plt.figure(figsize=(15, 8))
             print(self.numofchannels)
+            #This is the correct order where the channels were connected (including the old MEMS and the new Geosig)
             self.correctedorder = np.array([15, 16, 17, 12, 13, 23, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6])
             xyi = np.zeros((self.numofchannels), dtype=object)
             counter = 0
@@ -134,8 +135,10 @@ class OMA(object):
         return DONTRUNFLAG
 
     def calibrate(self, **kwargs):
+        '''Converts the signal in mA to gravity acceleration'''
         self.voltagerange = kwargs.get('voltagerange', np.array([4, 20]))  # in mA (after V-mA convertion)
         self.gravityrange = kwargs.get('gravityrange', np.array([-2, 2]))  # in g units
+        #This is the poistion of the Geosig sensor channels!: Beam (X,Y,Z), Camera(X,Y,Z), Dish(X,Y,Z)
         self.correctedordergoodsensors = [12, 13, 23, 10, 11, 0, 4, 5, 6]
         self.sensors = kwargs.get('sensors', np.array(self.correctedordergoodsensors))
         self.numofchannelsnew = np.size(self.sensors)
@@ -878,6 +881,7 @@ class OMA(object):
         return self.efddmodalfreqs, self.efdddampingratio, self.enhancedmodalshape
 
     def spectrogram(self, channel):
+        '''INCOMPLETE: Attempt to produce a spectrogram'''
         countingch = np.array(np.where(channel in self.sensors))[0, 0]
         f, t, Sxx = signal.spectrogram(self.Victordecimated[:, countingch], fs=self.desiredmaxfreq * 2)
         Sxx = np.log10(Sxx)
@@ -913,8 +917,10 @@ class OMA(object):
         return self.Calibrateddata"""
 
     def sensorshift(self, **kwargs):
+        '''INCOMPLETE: Derives the shift of one channel of one sensor in comparison to other channel in other sensor'''
         # Coordinate system: center of central plane is the origin
         # self.coordinates = kwargs.get('coordinates', np.array([[-2100,-2890,0],[1650,1650,4900],[3000,-5400,-10570]]))
+        #Values extractted from the CAD, these are the coordinates of the sensors positions in meters
         self.coordinates = kwargs.get('coordinates',
                                       np.array([[1.650, 1.650, 4.900], [3.000, -5.400, -10.570]]))
         numofsensors = self.numofchannelsnew // 3  # for tri axial sensors
@@ -984,7 +990,7 @@ class OMA(object):
 
 
 if __name__ == "__main__":
-    import argparse
+
     parser = argparse.ArgumentParser(description='Process OMA analysis.')
 
     parser.add_argument('--input', dest='fileinput',
