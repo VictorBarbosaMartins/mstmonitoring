@@ -291,7 +291,8 @@ class Reports(object):
         s.starttls()
 
         # Authentication
-        s.login(fromaddr, "mst@adlershof")
+        # Fake password by now
+        s.login(fromaddr, "mst@")
 
         # Converts the Multipart msg into a string
         text = msg.as_string()

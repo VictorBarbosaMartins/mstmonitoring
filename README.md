@@ -1,4 +1,5 @@
-# Health Monitoring System for the MST Structure
+# Cherenkov Telescope Array (CTA)
+## Software development for the Health Monitoring System of the Medium-Sized Telescope (MST) Structure
 This Project is for the development of a system, which is able to deliver important information about the telescope structure. The analysis and the reports are generated automatically. The system should be able to detect changes in the structure such as variations in the rope tensions and other structure damages. The local team should receive a report whenever a change is detected and should act accordingly to avoid further damages to the telescopes.
 
 ## Geeting Started
