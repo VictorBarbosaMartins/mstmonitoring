@@ -1,6 +1,6 @@
 import errno
 import os
-
+import matplotlib
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 
@@ -11,7 +11,12 @@ from scipy.stats import chisquare
 
 import definitions as names
 
-
+import matplotlib.style as style
+from scipy import interpolate
+style.use('seaborn-colorblind')
+style.use('/afs/ifh.de/group/hess/scratch/user/vimartin/HESS/usefullscripts/morphology/matplot_default')
+plt.set_cmap("afmhot")
+import seaborn as sns
 class Weather(object):
     """
     This class analyses the weather data to give a quality check for the accelerometers data set
@@ -85,7 +90,7 @@ class Weather(object):
         nonzerointemp = self.insidetemperature != 0
         self.insidetemperature = self.dictofvariables['insidetemperature'][self.condition]
         self.insidetemperature = self.insidetemperature[nonzerointemp]
-        OUTTEMP = self.resultsfolder + self.year + self.month + self.day + names.TEMPERATURE + '.png'
+        OUTTEMP = self.resultsfolder + self.year + self.month + self.day + names.TEMPERATURE + '.pdf'
         #if os.path.isfile(OUTTEMP):
         #DONTRUNFLAG = 1
         #print("File " + OUTTEMP + " already exists.")
@@ -108,7 +113,7 @@ class Weather(object):
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
 
-        xytemperature.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
+        #xytemperature.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
         plt.legend(fontsize=15)
         figtemperature.savefig(OUTTEMP)
         plt.close()
@@ -128,7 +133,7 @@ class Weather(object):
         xyhumidity.set_xlim(self.timeofacquisition[0], self.timeofacquisition[1])
         xyhumidity.set_xlabel('Time (h)', fontsize=20)
         xyhumidity.set_ylabel('Relative humidity (%)', fontsize=20)
-        xyhumidity.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
+        #xyhumidity.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=20)
         plt.legend(fontsize=15)
         fighumidity.savefig(self.resultsfolder + self.year + self.month + self.day + names.HUMIDITY + '.png')
         plt.close()
@@ -145,18 +150,23 @@ class Weather(object):
         xypressure.set_ylabel('Pressure (mm Hg)', fontsize=15)
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
-        xypressure.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
+        #xypressure.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
         plt.legend(fontsize=15)
-        figpressure.savefig(self.resultsfolder + self.year + self.month + self.day + names.PRESSURE + '.png')
+        figpressure.savefig(self.resultsfolder + self.year + self.month + self.day + names.PRESSURE + '.pdf')
         plt.close()
 
         # Wind
-        figwind = plt.figure(figsize=(12, 12))
+        figwind = plt.figure(figsize=(8,8))
         xywind = figwind.add_subplot(111)
         self.windspeed = self.dictofvariables['windspeed'][self.condition]
+        self.windspeed = np.array([np.mean(self.windspeed[i:i+1000]) for i in range(np.size(self.windspeed)-1000)])
         maxspeed = np.amax(self.windspeed)
+        minspeed = np.amin(self.windspeed)
         self.winddirection = self.dictofvariables['winddirection'][self.condition]
-
+        self.winddirection = np.array([np.mean(self.winddirection[i:i+1000]) for i in range(np.size(self.winddirection)-1000)])
+        norm = matplotlib.colors.Normalize()
+        #colors = sns.color_palette("colorblind", as_cmap=True,n_colors=np.size(self.winddirection))
+        colors = plt.cm.afmhot(norm(self.winddirection))
         for step in range(np.size(self.winddirection)):
             # Defining direction of the wind
             '''if (self.winddirection[step]>0) & (self.winddirection[step]<90):
@@ -175,24 +185,31 @@ class Weather(object):
             # Drawing lines in the diagram
             windarrowx = [0, self.windspeed[step] * xdirec]
             windarrowy = [0, self.windspeed[step] * ydirec]
-            linewind = mlines.Line2D(windarrowx, windarrowy, c='C0')
+            linewind = mlines.Line2D(windarrowx, windarrowy,color=colors[step])
             xywind.add_line(linewind)
-        circle = plt.Circle((0, 0), maxspeed, color='black', fill=False, linestyle='--')
-        plt.text(np.around(maxspeed, 1) - .45, 0, str(np.around(maxspeed, 1)))
-        onethirdcircle = plt.Circle((0, 0), 1 / 3 * maxspeed, color='black', fill=False, linestyle='--')
-        plt.text(np.around(1 / 3 * maxspeed, 1) - .45, 0, str(np.around(1 / 3 * maxspeed, 1)))
-        twothirdscircle = plt.Circle((0, 0), 2 / 3 * maxspeed, color='black', fill=False, linestyle='--')
-        plt.text(np.around(2 / 3 * maxspeed, 1) - .45, 0, str(np.around(2 / 3 * maxspeed, 1)))
+        circle = plt.Circle((0, 0), maxspeed, color='black', fill=False, linestyle='--',zorder=10)
+        plt.text(0,maxspeed, str(np.around(maxspeed, 2)),zorder=15,fontsize=18)
+        mincircle = plt.Circle((0, 0), minspeed, color='black', fill=False, linestyle='--',zorder=10)
+        plt.text(0,minspeed, str(np.around(minspeed, 2)),zorder=15,fontsize=18)
+        meancircle = plt.Circle((0, 0), np.mean(self.windspeed), color='C0', fill=False, linestyle='-.',zorder=10)
+        plt.text(0, np.mean(self.windspeed), str(np.around(np.mean(self.windspeed), 2)),fontsize=18,zorder=15)
         xywind.add_artist(circle)
-        xywind.add_artist(onethirdcircle)
-        xywind.add_artist(twothirdscircle)
-        xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(
-            self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h')
-        xywind.set_xlim(-maxspeed, maxspeed)
-        xywind.set_ylim(-maxspeed, maxspeed)
+        xywind.add_artist(mincircle)
+        xywind.add_artist(meancircle)
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        divider = make_axes_locatable(plt.gca())
+        ax_cb = divider.new_horizontal(size="5%", pad=0.05)
+        cb1 = matplotlib.colorbar.ColorbarBase(ax_cb, cmap=matplotlib.cm.afmhot, orientation='vertical')
+        cb1.ax.set_yticklabels(np.linspace(self.timeofacquisition[0],7,6))
+        cb1.set_label('Time (h)')
+        plt.gcf().add_axes(ax_cb)
+        #xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(
+        #self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h', fontsize=15)
+        xywind.set_xlim(-maxspeed-0.2, maxspeed+0.2)
+        xywind.set_ylim(-maxspeed-0.2, maxspeed+0.2)
         xywind.set_xlabel('Wind speed X-direction (m/s)')
         xywind.set_ylabel('Wind speed Y-direction (m/s)')
-        figwind.savefig(self.resultsfolder + self.year + self.month + self.day + names.WIND + '.png')
+        figwind.savefig(self.resultsfolder + self.year + self.month + self.day + names.WIND + '.pdf')
         plt.close()
 
         # Rain rate
@@ -206,9 +223,9 @@ class Weather(object):
         xyrainrate.set_ylabel('Rain rate', fontsize=15)
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
-        xyrainrate.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
+        #xyrainrate.set_title(self.month + ', ' + self.day + ', ' + self.year, fontsize=15)
         plt.legend(fontsize=15)
-        figrainrate.savefig(self.resultsfolder + self.year + self.month + self.day + names.RAINRATE + '.png')
+        figrainrate.savefig(self.resultsfolder + self.year + self.month + self.day + names.RAINRATE + '.pdf')
         # plt.show()
         plt.close()
 
@@ -269,7 +286,6 @@ class Weather(object):
         self.windmeanthreshold = kwargs.get('windthreshold', 1.1)
         self.windmeanmax = kwargs.get('windmeanmax', 2.5)
         self.winddirminvariance = kwargs.get('winddirminvariance', 120)
-
         WindSpeedFlag, WindDirectionFlag = 0, 0
 
         #if DONTRUNFLAG == 1:
@@ -301,8 +317,8 @@ class Weather(object):
 
 
 if __name__ == "__main__":
-    A = Weather('weatherData20190703.txt')
-    DONTRUNFLAG = A.Analysis(timeofacquisition=(7, 7.5))
+    A = Weather('weatherData20191107.txt')
+    DONTRUNFLAG = A.Analysis(timeofacquisition=(6, 7.0))
     help(Weather)
     # A.Statistics(DONTRUNFLAG)
     # A.Qualitycheck(DONTRUNFLAG)
