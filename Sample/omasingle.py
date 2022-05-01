@@ -59,8 +59,8 @@ class OMA(object):
                     raise
 
     def delete_results(self):
-        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.png'
-        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.png'
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.pdf'
+        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.pdf'
         for string in [self.OUT, self.OUTFDDFIG]:
             try:
                 #Delete results so the analysis can be ran again.
@@ -75,7 +75,7 @@ class OMA(object):
         to do: Remove/alter function once the number of available channels changes'''
 
         filename = self.filename
-        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.png'
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_ALL + '.pdf'
 
         if os.path.isfile(self.OUT):
             print("File " + self.OUT + " already exists.")
@@ -115,7 +115,7 @@ class OMA(object):
 
     def rawdataplot(self, channel):
         '''Plot the raw data for one channel from 1 to number max. of channels'''
-        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_CH + str(self.channel) + '.png'
+        self.OUT = self.rawdatafolder + self.filename[:-4] + names.RAW_CH + str(self.channel) + '.pdf'
         if os.path.isfile(self.OUT):
             print("File " + self.OUT + " already exists.")
             DONTRUNFLAG = 1
@@ -228,7 +228,7 @@ class OMA(object):
         self.left, self.right = [
             np.zeros((numberoffreqlines, self.numofchannelsnew, self.numofchannelsnew)) for i in range(2)]
 
-        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.png'
+        self.OUTFDDFIG = self.resultsfolder + self.filename[:-4] + names.FDD + '.pdf'
 
         self.DONTRUNFLAG = 0
 
@@ -279,7 +279,7 @@ class OMA(object):
             self.singvaluesindecb = np.zeros((numberoffreqlines, self.numoflinestoplot))
             for sensor in range(self.numoflinestoplot):
                 self.singvaluesindecb[:, sensor] = 10 * np.log10(self.Victorsingularvalues[:, sensor] / self.reference)
-                xyi.plot(self.frequencyrange, self.singvaluesindecb[:, sensor], linewidth=1)
+                xyi.plot(self.frequencyrange, self.singvaluesindecb[:, sensor], linewidth=1,)
                 # xyi.plot(frequencyrange,Victorsingularvalues[:,sensor],linewidth=1)
                 # xyi.set_yscale('log')
             legend = xyi.legend(labels=['1st SV','2nd SV','3rd SV'], title="Singular Value (SV)",
@@ -377,7 +377,7 @@ class OMA(object):
         plt.title('OMA with frequency peaks', fontsize=25)
         plt.legend(fontsize=15, loc=1)
         f9.savefig(self.resultsfolder + self.filename[:-4] + names.FDD + str(self.sensors) + names.PEAKS + '-' + str(
-            np.around(self.freal, 1)) + names.DECIMATION + '.png')
+            np.around(self.freal, 1)) + names.DECIMATION + '.pdf')
         # plt.close(f9)
         # del f9
         return self.peaksstorage
@@ -441,9 +441,9 @@ class OMA(object):
         xyi.set_ylabel('Freq.(Hz)', fontsize=15)
         xyi.set_title('MAC - Peaks', fontsize=15)
         if self.macselectionflag == 0:
-            f10.savefig(self.resultsfolder + self.filename[:-4] + names.MACVALUE_ALL + '.png')
+            f10.savefig(self.resultsfolder + self.filename[:-4] + names.MACVALUE_ALL + '.pdf')
         elif self.macselectionflag == 1:
-            f10.savefig(self.resultsfolder + self.filename[:-4] + names.MACVALUE_SELECTED + '.png')
+            f10.savefig(self.resultsfolder + self.filename[:-4] + names.MACVALUE_SELECTED + '.pdf')
 
         # plt.close(f10)
         # del f10
@@ -570,18 +570,19 @@ class OMA(object):
                     continue"""
 
             # Plot the bell shape for the peak
-            fig = plt.figure(figsize=(10, 8))
+            fig = plt.figure(figsize=(8, 8))
             xyi = fig.add_subplot(111)
-            xyi.plot(self.frequencyrange, bellfunction, c='red', linewidth=3.5)
-            xyi.set_xlabel('Freq.(Hz)', fontsize=15)
+            xyi.plot(self.frequencyrange, bellfunction/np.amax(bellfunction), c='C0')
+            xyi.set_xlabel('Freq.(Hz)')
+            xyi.set_ylabel('Normalized intensity (a.u.)')
             # xyi.set_ylabel('Intensity (dB)', fontsize=15)
-            xyi.set_title('Bell shape - peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
-                          fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks(fontsize=15)
-            xyi.set_xlim(self.frequencyrange[peak] - .25, self.frequencyrange[peak] + .25)
+            #xyi.set_title('Bell shape - peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))))
+            #xyi.set_xlim(self.frequencyrange[peak] - .25, self.frequencyrange[peak] + .25)
+            xyi.set_xlim(self.frequencyrange[np.where(bellfunction!=0)[0][0]] - .025, self.frequencyrange[np.where(bellfunction!=0)[0][-1]] + .025)
             fig.savefig(self.resultsfolder + self.filename[:-4] + names.BELLSHAPE + '-' + str(
-                np.around(self.frequencyrange[peak], decimals=2)) + 'Hz.png')
+                np.around(self.frequencyrange[peak], decimals=2)) + 'Hz.pdf')
+            fig.savefig(self.resultsfolder + self.filename[:-4] + names.BELLSHAPE + '-' + str(
+                np.around(self.frequencyrange[peak], decimals=2)) + 'Hz.pdf')
             plt.close()
             # if self.frequencyrange[peak] > 1:
 
@@ -645,8 +646,8 @@ class OMA(object):
                 fig3 = plt.figure(figsize=(10, 8))
                 xyi3 = fig3.add_subplot(111)
                 xyi3.scatter(time[correlationpeaks], 2 * np.log(np.abs(normcorrelationfunc[correlationpeaks])), marker='+',
-                             label='data')
-                xyi3.plot(time[correlationpeaks[goodindexes]], fittedlogdec, c='red', label='linear fitting')
+                             label='data', color='C0')
+                xyi3.plot(time[correlationpeaks[goodindexes]], fittedlogdec, c='black', label='linear fitting')
                 xyi3.set_xlabel('Time lag (s)', fontsize=15)
                 xyi3.set_ylabel(r'$ ln|r_{k_{0}}/r_{k}|$', fontsize=15)
                 xyi3.set_title('LogDec estimation - peak at {0} Hz'.format(str(np.around(self.frequencyrange[peak], 2))),
@@ -655,7 +656,7 @@ class OMA(object):
                 plt.yticks(fontsize=15)
                 plt.legend()
                 fig3.savefig(self.resultsfolder + self.filename[:-4] + names.LOGDEC + '-' + str(
-                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.pdf')
                 plt.close()
 
                 # Estimate damping factor from the LogDec factor
@@ -673,10 +674,10 @@ class OMA(object):
                 xyi2 = fig2.add_subplot(111)
                 xyi2.plot(time[1:], normcorrelationfunc, linewidth=2.5, label='Autocorr. function')
                 xyi2.scatter(time[correlationpeaks[goodindexes]], normcorrelationfunc[correlationpeaks[goodindexes]],
-                             marker='+', color='black')
+                             marker='+', color='C0')
                 xyi2.plot(time[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
                           normcorrelationfunc[correlationpeaks[goodindexes[0]]:correlationpeaks[goodindexes[-1]]],
-                          linewidth=3, c='red', label='ROI')
+                          linewidth=3, c='C1', label='ROI')
                 # xyi2.plot(time[1+roi], 0.4+np.exp(-decayfactor*roi), linewidth=3, c='green', label='decay envelope')
 
                 # xyi2.plot(time[1+roipeaks[1:]],expdecay(roipeaks[1:],popt[0],popt[1]))
@@ -689,7 +690,7 @@ class OMA(object):
                 plt.xticks(fontsize=15)
                 plt.yticks(fontsize=15)
                 fig2.savefig(self.resultsfolder + self.filename[:-4] + names.AUTOCORREL + '-' + str(
-                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.pdf')
                 plt.close()
 
                 # Crossing times and natural frequency
@@ -709,7 +710,7 @@ class OMA(object):
                 plt.xticks(fontsize=15)
                 plt.yticks(fontsize=15)
                 fig4.savefig(self.resultsfolder + self.filename[:-4] + names.ZEROCROSSING + '-' + str(
-                    np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                    np.around(self.frequencyrange[peak], 2)) + 'Hz.pdf')
                 plt.close()
                 naturalfrequency = dampedfreq / np.sqrt(1 - np.square(dampingfactor))
                 decayfactor = dampingfactor * naturalfrequency
@@ -726,7 +727,7 @@ class OMA(object):
                 xy.plot(normcorrelationfunc)
                 figteste.savefig(self.resultsfolder + 'test-curve-correlfunc-' + str(np.around(self.frequencyrange[
                                                                                                    peak],
-                                                                                     2))+'.png')
+                                                                                     2))+'.pdf')
                 plt.close()
                 naturalfrequency = self.frequencyrange[peak]
                 dampingfactor = np.nan
@@ -752,7 +753,7 @@ class OMA(object):
             plt.xticks(fontsize=15)
             plt.yticks(fontsize=15)
             figrawmodeshape.savefig(self.resultsfolder + self.filename[:-4] + names.EFDD_MODE_SHAPE + '-' + str(
-                np.around(self.frequencyrange[peak], 2)) + 'Hz.png')
+                np.around(self.frequencyrange[peak], 2)) + 'Hz.pdf')
             plt.grid()
             plt.legend()
             # plt.show()
@@ -894,7 +895,7 @@ class OMA(object):
         xyi.set_xlabel('Time(s)', fontsize=15)
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
-        fig.savefig(self.resultsfolder + self.filename[:-4] + names.SPECTOGRAM + str(channel + 1) + '.png')
+        fig.savefig(self.resultsfolder + self.filename[:-4] + names.SPECTOGRAM + str(channel + 1) + '.pdf')
         plt.close()
 
         """def calibrate(self,**kwargs):
@@ -981,7 +982,7 @@ class OMA(object):
                     plt.legend()
                     figshifts.savefig(
                         self.resultsfolder + self.filename[:-4] + names.SHIFT + str(sensors1 + 1) + '-Ch. ' + str(
-                            sensors2 + 1) + '.png')
+                            sensors2 + 1) + '.pdf')
                     np.savetxt(
                         self.resultsfolder + self.filename[:-4] + names.SHIFT + str(sensors1 + 1) + '-Ch. ' + str(
                             sensors2 + 1) + '.txt', self.sensorshiftdecimated[:, sensors1, sensors2])

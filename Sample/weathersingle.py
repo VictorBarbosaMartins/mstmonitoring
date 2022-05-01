@@ -151,7 +151,7 @@ class Weather(object):
         plt.close()
 
         # Wind
-        figwind = plt.figure(figsize=(8, 8))
+        figwind = plt.figure(figsize=(12, 12))
         xywind = figwind.add_subplot(111)
         self.windspeed = self.dictofvariables['windspeed'][self.condition]
         maxspeed = np.amax(self.windspeed)
@@ -175,7 +175,7 @@ class Weather(object):
             # Drawing lines in the diagram
             windarrowx = [0, self.windspeed[step] * xdirec]
             windarrowy = [0, self.windspeed[step] * ydirec]
-            linewind = mlines.Line2D(windarrowx, windarrowy, c='red')
+            linewind = mlines.Line2D(windarrowx, windarrowy, c='C0')
             xywind.add_line(linewind)
         circle = plt.Circle((0, 0), maxspeed, color='black', fill=False, linestyle='--')
         plt.text(np.around(maxspeed, 1) - .45, 0, str(np.around(maxspeed, 1)))
@@ -187,11 +187,11 @@ class Weather(object):
         xywind.add_artist(onethirdcircle)
         xywind.add_artist(twothirdscircle)
         xywind.set_title('Wind diagram: ' + self.month + ', ' + self.day + ', ' + self.year + ', ' + str(
-            self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h', fontsize=15)
+            self.timeofacquisition[0]) + 'h - ' + str(self.timeofacquisition[1]) + 'h')
         xywind.set_xlim(-maxspeed, maxspeed)
         xywind.set_ylim(-maxspeed, maxspeed)
-        xywind.set_xlabel('Wind speed X-direction (m/s)', fontsize=15)
-        xywind.set_ylabel('Wind speed Y-direction (m/s)', fontsize=15)
+        xywind.set_xlabel('Wind speed X-direction (m/s)')
+        xywind.set_ylabel('Wind speed Y-direction (m/s)')
         figwind.savefig(self.resultsfolder + self.year + self.month + self.day + names.WIND + '.png')
         plt.close()
 
